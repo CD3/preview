@@ -1,30 +1,63 @@
 #! /bin/bash
 
+eval "$(docopts -h - : "$@" <<EOF
+Usage: preview [options] <file>
 
+      -p --print-makefile  Show makefile and exit.
 
-ifile=$1
+EOF
+)"
+
+ifile=${file[0]}
 shift
 
+tmpdir=$(mktemp -d)
 ifile=$(readlink -f $ifile)
 ofile=${ifile//\//_}
 ofile=${ofile//./_}
-ofile=${ofile}.html
+ofile=${tmpdir}/${ofile}.html
 
-cd $(mktemp -d)
+makefile="Makefile"
+if [ ! -e $makefile ] 
+then
+makefile=${tmpdir}/Makefile
+cat >$makefile << 'EOF'
+INFILE=test.md
+OUTFILE=$(PWD)/test.md.html
 
-vimb -s -d file://$ifile > _socket &
-vimbPID=$!
+build:
+	pandoc -f markdown -t html -o $(OUTFILE) $(INFILE)
+
+view:
+	vimb -s -d file://$(OUTFILE) 1>_socket 2>/dev/null
+
+refresh:
+	echo ':o file://$(OUTFILE)<CR>' | socat - UNIX-CONNECT:`tail -n 1 _socket`
+EOF
+fi
+
+if $print_makefile
+then
+  cat $makefile
+  exit
+fi
+
+
+
+
+make="make -f $makefile INFILE=${ifile} OUTFILE=${ofile}"
+
+
+$make build
+$make view &
+viewPID=$!
 sleep 0.1
-SOCKET=$(tail -n 1 _socket)
 
-build_cmd="pandoc -f markdown -t html -o $ofile $ifile"
-refresh_cmd="echo ':o file://$PWD/$ofile<CR>' | socat - UNIX-CONNECT:$SOCKET"
-
-ls $ifile | entr sh -c "$build_cmd && $refresh_cmd" &
+ls $ifile | entr sh -c "$make build && $make refresh" &
 entrPID=$!
 
-echo $vimbPID
+echo $viewPID
 echo $entrPID
 
-wait $vimbPID
+wait $viewPID
 kill $entrPID
