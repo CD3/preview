@@ -1,0 +1,30 @@
+#! /bin/bash
+
+
+
+ifile=$1
+shift
+
+ifile=$(readlink -f $ifile)
+ofile=${ifile//\//_}
+ofile=${ofile//./_}
+ofile=${ofile}.html
+
+cd $(mktemp -d)
+
+vimb -s -d file://$ifile > _socket &
+vimbPID=$!
+sleep 0.1
+SOCKET=$(tail -n 1 _socket)
+
+build_cmd="pandoc -f markdown -t html -o $ofile $ifile"
+refresh_cmd="echo ':o file://$PWD/$ofile<CR>' | socat - UNIX-CONNECT:$SOCKET"
+
+ls $ifile | entr sh -c "$build_cmd && $refresh_cmd" &
+entrPID=$!
+
+echo $vimbPID
+echo $entrPID
+
+wait $vimbPID
+kill $entrPID
