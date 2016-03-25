@@ -1,38 +1,105 @@
 #! /bin/bash
 
-eval "$(docopts -h - : "$@" <<EOF
-Usage: preview [options] <file>
+getfile=""
+if which Xdialog > /dev/null; then
+  getfile="Xdialog --no-buttons -fselect '' 0 0 2>&1"
+fi
 
+
+eval "$(docopts -h - : "$@" <<EOF
+Usage: preview [options] [FILE]
+
+'preview' allows you to quickly preview a file from its source, for example markdown files.
+It uses the 'entr' command to monitor the source file and automatically update the preview.
+
+'preview' uses a makefile to execute the commands required to build, view, and refresh the preview.
+If a makefile is found in the current directory, it will be used, otherwise a default makefile is used.
+If you choose to use your own makefile, you must define the following targets
+
+build - This target should build the output file to be viewed from your source. By default 'preview' uses pandoc to generate an html
+        file from markdown source. This target will be ran each time the source file is updated (saved).
+
+view  - This target should open the output file in a viewing program. By default 'preview' uses vimb to open the html
+        file that was generated with the build target.
+
+refresh - This target should refresh the viewer. By default 'preview' uses the socket communication feature of vimb to send refresh commands.
+
+These targets are optional.
+
+outfile - This target should print the name of the output file (the file that will be viewed with the viewer).
+          By default, 'preview' generates the output filename by replacing all slashes (/) and periods (.) with underscores (_),
+          then appendeng a ".html" extension and prepends the name of the temp directory (see below)
+
+These variables will be passed into the makefile by 'preview', and can be used in your targets.
+
+INFILE  - the name of the source file to be previewed.
+OUTFILE - the name of the generated file that will be viewed by the viewer
+TMPDIR  - the name of a temperary directory that has been created by 'preview'. If you want the output files to be generated in a temp
+          directory, you should prepend the output filename with this directory.
+
+You can run:
+  > preview -p
+to see the makefile that is used by 'preview' by default.
+
+Options:
       -p --print-makefile  Show makefile and exit.
+      -f --makefile FILE Use FILE instead of default makefile.
+
+
+
 
 EOF
 )"
 
-ifile=${file[0]}
+ifile=${FILE[0]}
 shift
 
-tmpdir=$(mktemp -d)
-ifile=$(readlink -f $ifile)
-ofile=${ifile//\//_}
-ofile=${ofile//./_}
-ofile=${tmpdir}/${ofile}.html
+if [ ! $ifile ]; then
+  ifile=$(Xdialog --no-buttons -fselect '' 0 0 2>&1)
+fi
 
-makefile="Makefile"
+tmpdir=$(mktemp -d)
+
+# try to find a makefile
+wd=$(dirname $ifile)
+ext=${ifile##*.}
+if [ ! -e "$makefile" ]
+then
+  # look for a Makefile with the same extension as the input file
+  # in the same directory as the input file
+  makefile="$wd/Makefile.$ext"
+fi
+
+if [ ! -e "$makefile" ]
+then
+  # look for a Makefile
+  # in the same directory as the input file
+  makefile="$wd/Makefile"
+fi
+
+
+if [ ! -e "$makefile" ]
+then
+  # look for a Makefile in the directory we where called from
+  makefile="Makefile"
+fi
+
 if [ ! -e $makefile ] 
 then
+# create a makefile
 makefile=${tmpdir}/Makefile
 cat >$makefile << 'EOF'
-INFILE=test.md
-OUTFILE=$(PWD)/test.md.html
+outfile:
+	@echo $(TMPDIR)/$$( echo $(INFILE)  | sed 's|/|_|g' | sed 's|\.|_|g').html
 
 build:
-	pandoc -f markdown -t html -o $(OUTFILE) $(INFILE)
+	@pandoc -f markdown -t html -o $(OUTFILE) $(INFILE)
 
 view:
-	vimb -s -d file://$(OUTFILE) 1>_socket 2>/dev/null
+	@vimb -s -d file://$(OUTFILE) 1>$(TMPDIR)/_socket 2>/dev/null
 
 refresh:
-	echo ':o file://$(OUTFILE)<CR>' | socat - UNIX-CONNECT:`tail -n 1 _socket`
+	@echo ':o file://$(OUTFILE)<CR>' | socat - UNIX-CONNECT:`tail -n 1 $(TMPDIR)/_socket`
 EOF
 fi
 
@@ -42,22 +109,29 @@ then
   exit
 fi
 
+ifile=$(readlink -f $ifile)
+make="make -f $makefile INFILE=${ifile} TMPDIR=${tmpdir}"
+
+
+if $make outfile > /dev/null 2>&1
+then
+  ofile=$($make outfile)
+else
+  ofile=${tmpdir}/$( echo ${ifile}  | sed 's|/|_|g' | sed 's|\.|_|g').htmlxx
+fi
+make="$make OUTFILE=${ofile}"
 
 
 
-make="make -f $makefile INFILE=${ifile} OUTFILE=${ofile}"
 
 
-$make build
+$make build > /dev/null
 $make view &
 viewPID=$!
 sleep 0.1
 
 ls $ifile | entr sh -c "$make build && $make refresh" &
 entrPID=$!
-
-echo $viewPID
-echo $entrPID
 
 wait $viewPID
 kill $entrPID
