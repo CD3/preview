@@ -1,12 +1,8 @@
 #! /bin/bash
 
-getfile=""
-if which Xdialog > /dev/null; then
-  getfile="Xdialog --no-buttons -fselect '' 0 0 2>&1"
-fi
-
-
-eval "$(docopts -h - : "$@" <<EOF
+function print_usage()
+{
+cat <<EOF
 Usage: preview [options] [FILE]
 
 'preview' allows you to quickly preview a file from its source, for example markdown files.
@@ -37,6 +33,15 @@ OUTFILE - the name of the generated file that will be viewed by the viewer
 TMPDIR  - the name of a temperary directory that has been created by 'preview'. If you want the output files to be generated in a temp
           directory, you should prepend the output filename with this directory.
 
+Dependencies:
+  Required:
+    - docopts : command line parser for shell scripts
+
+  Optional:
+    - pandoc : used by preview's default makefile to build html from markdown
+    - vimb : used by preview's default makefile to view html
+    - socat : used by preview's default makefile to refresh preview
+
 You can run:
   > preview -p
 to see the makefile that is used by 'preview' by default.
@@ -46,12 +51,53 @@ Options:
       -f --makefile FILE Use FILE instead of default makefile.
 
 
-
-
 EOF
-)"
+}
 
-ifile=${FILE[0]}
+# the getopt command is external to the shell. essentially what it
+# does is parse the command line parameters and rearrange them so
+# that all of the options are given before any of the arguments, and
+# adds a '--' between the options and arguments. 
+# then you can setup a while loop to process options easily and terminate
+# it when you run into the '--'
+
+# both long and short options can be given
+# short options are passed to -o
+# long  options are passed to -l
+# a colon (:) after an option means it has a required argument
+# two colons (::) after an option means it has a optional argument
+
+
+NEW_COMMAND_LINE=$(getopt -o hpf: -l print_makefile,help,makefile: -n preview -- "$@")   # this creates a rearranged version of the command line
+if [ $? != 0 ] ; then echo "getopt returned an error, Terminating..." >&2 ; exit 1 ; fi
+eval set -- "$NEW_COMMAND_LINE"                                                                          # this sets up positional parameters to the new command line
+
+
+# now we can just manually loop through the positional parameters
+print_makefile=0
+makefile=""
+while true ; do
+  case "$1" in
+    -h|--help)
+        print_usage
+        exit;
+        ;;
+    -p|--print_makefile)
+        print_makefile=1
+        shift 1
+        ;;
+    -f|--makefile)
+        makefile=$2
+        shift 2
+        ;;
+    --) shift ; break ;;
+     *) echo "Unreconized option got through: '$1'" ; exit 1 ;;
+  esac
+done
+
+# arguments start at $1...
+
+ifile=${1}
 shift
 
 if [ ! $ifile ]; then
@@ -103,7 +149,7 @@ refresh:
 EOF
 fi
 
-if $print_makefile
+if [ $print_makefile -eq 1 ]
 then
   cat $makefile
   exit
