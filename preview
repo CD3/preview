@@ -115,8 +115,9 @@ fi
 tmpdir=$(mktemp -d)
 
 # try to find a makefile
-wd=$(dirname $ifile)
-ext=${ifile##*.}
+wd=$(dirname $ifile) # directory that the source file is in
+ext=${ifile##*.}     # extension of the source file
+
 if [ ! -e "$makefile" ]
 then
   # look for a Makefile with the same extension as the input file
@@ -126,16 +127,22 @@ fi
 
 if [ ! -e "$makefile" ]
 then
+  # look for a Makefile with the same extension as the input file
+  # in the .preview directory
+  makefile="~/.preview/Makefile.$ext"
+fi
+
+if [ ! -e "$makefile" ]
+then
   # look for a Makefile
   # in the same directory as the input file
   makefile="$wd/Makefile"
 fi
 
-
 if [ ! -e "$makefile" ]
 then
   # look for a Makefile in the directory we where called from
-  makefile="Makefile"
+  makefile="~/.preview/Makefile"
 fi
 
 if [ ! -e $makefile ] 
