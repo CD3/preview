@@ -101,7 +101,15 @@ ifile=${1}
 shift
 
 if [ ! $ifile ]; then
-  ifile=$(Xdialog --no-buttons -fselect '' 0 0 2>&1)
+  if which Xdialog 2>&1 > /dev/null
+  then
+    ifile=$(Xdialog --no-buttons -fselect '' 0 0 2>&1)
+  #elif which dialog 2>&1 > /dev/null
+  #then
+    #ifile=$(dialog --fselect '' 0 0)
+  else
+    read -p "What file would you like to preview?" ifile
+  fi
 fi
 
 tmpdir=$(mktemp -d)
