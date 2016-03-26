@@ -129,9 +129,10 @@ if [ ! -e "$makefile" ]
 then
   # look for a Makefile with the same extension as the input file
   # in the .preview directory
-  makefile="~/.preview/Makefile.$ext"
+  makefile="$HOME/.preview/Makefile.$ext"
 fi
 
+echo "'$makefile'"
 if [ ! -e "$makefile" ]
 then
   # look for a Makefile
@@ -142,8 +143,9 @@ fi
 if [ ! -e "$makefile" ]
 then
   # look for a Makefile in the directory we where called from
-  makefile="~/.preview/Makefile"
+  makefile="$HOME/.preview/Makefile"
 fi
+
 
 if [ ! -e $makefile ] 
 then

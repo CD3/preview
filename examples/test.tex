@@ -1,0 +1,19 @@
+\begin{circuitikz}[scale=2]
+ \draw
+ (0,0)
+ --
+ (0,1) node[label=$a$]
+ to [R=$R_1$,*-*]
+ (1,1) node[label=$b$]
+ to [R=$R_2$,*-*]
+ (2,1) node[label=$c$]
+ to [R=$R_3$,*-*]
+ (3,1) node[label=$d$]
+ --
+ (3,0)
+ to [battery1,l=$\mathcal{E}_1$]
+ (2,0)
+ --
+ (0,0)
+ ;
+\end{circuitikz}
