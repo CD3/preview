@@ -101,7 +101,7 @@ ifile=${1}
 shift
 
 if [ ! $ifile ]; then
-  if which Xdialog 2>&1 > /dev/null
+  if which Xdialog > /dev/null 2>&1 
   then
     ifile=$(Xdialog --no-buttons -fselect '' 0 0 2>&1)
   #elif which dialog 2>&1 > /dev/null
