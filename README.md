@@ -4,9 +4,9 @@
 writing a Markdown file and you want to see a preview of what it will look like in HTML. There are many situations when this is useful, here are
 a just a few of the situations that motivated this script
 
-    - Markdown : The most common scenario. I use `vim` and couldn't find a good markdown previewer that I liked.
-    - gnuplot : It is nice to be able to see a preview of a plot generated with gnuplot while editing the script.
-    - Latex : Again, I use `vim`, so it's nice to have a preview of the PDF available while editing the source.
+- Markdown : The most common scenario. I use `vim` and couldn't find a good markdown previewer that I liked.
+- gnuplot : It is nice to be able to see a preview of a plot generated with gnuplot while editing the script.
+- Latex Snippets : I use LaTeX/circuitikz to create circuit diagrams and `tex2im` to create the image files. `preview` lets me see the image while I edit the LaTeX.
 
 ## What it does
 
