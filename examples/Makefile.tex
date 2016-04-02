@@ -2,7 +2,7 @@ outfile:
 	@echo $(basename $(INFILE)).png
 
 build:
-	tex2im -n $(INFILE)
+	tex2im -n -o $(OUTFILE) $(INFILE)
 
 view:
 	vimb -s -d file://$(OUTFILE) 1>$(TMPDIR)/_socket 2>/dev/null

@@ -47,7 +47,7 @@ You can run:
 to see the makefile that is used by 'preview' by default.
 
 Options:
-      -p --print-makefile  Show makefile and exit.
+      -p --print-makefile  Print the makefile that will be used and exit.
       -f --makefile FILE Use FILE instead of default makefile.
 
 
@@ -96,19 +96,21 @@ while true ; do
 done
 
 # arguments start at $1...
-
 ifile=${1}
 shift
 
-if [ ! $ifile ]; then
-  if which Xdialog > /dev/null 2>&1 
-  then
-    ifile=$(Xdialog --no-buttons -fselect '' 0 0 2>&1)
-  #elif which dialog 2>&1 > /dev/null
-  #then
-    #ifile=$(dialog --fselect '' 0 0)
-  else
-    read -p "What file would you like to preview?" ifile
+if [ $print_makefile -eq 0 ]; then
+  if [ ! -e "$ifile" ]; then
+    last_ifile=$(cat ~/.preview/last_ifile)
+    if which Xdialog > /dev/null 2>&1 
+    then
+      ifile=$(Xdialog --no-buttons -fselect "$last_ifile" 0 0 2>&1)
+    #elif which dialog 2>&1 > /dev/null
+    #then
+      #ifile=$(dialog --fselect '' 0 0)
+    else
+      read -p "What file would you like to preview?" ifile
+    fi
   fi
 fi
 
@@ -132,7 +134,6 @@ then
   makefile="$HOME/.preview/Makefile.$ext"
 fi
 
-echo "'$makefile'"
 if [ ! -e "$makefile" ]
 then
   # look for a Makefile
@@ -147,24 +148,31 @@ then
 fi
 
 
-if [ ! -e $makefile ] 
+if [ ! -e "$makefile" ] 
 then
 # create a makefile
 makefile=${tmpdir}/Makefile
 cat >$makefile << 'EOF'
+.PHONY: outfile
 outfile:
 	@echo $(TMPDIR)/$$( echo $(INFILE)  | sed 's|/|_|g' | sed 's|\.|_|g').html
 
+.PHONY: build
 build:
 	@pandoc -f markdown -t html -o $(OUTFILE) $(INFILE)
 
+.PHONY: view
 view:
 	@vimb -s -d file://$(OUTFILE) 1>$(TMPDIR)/_socket 2>/dev/null
 
+.PHONY: refresh
 refresh:
 	@echo ':o file://$(OUTFILE)<CR>' | socat - UNIX-CONNECT:`tail -n 1 $(TMPDIR)/_socket`
 EOF
 fi
+
+
+echo "Using '$makefile' for makefile"
 
 if [ $print_makefile -eq 1 ]
 then
@@ -172,7 +180,14 @@ then
   exit
 fi
 
+# exit if no input file was found
+if [ ! -e "$ifile" ]; then
+  exit 1
+fi
+
+
 ifile=$(readlink -f $ifile)
+echo $ifile > ~/.preview/last_ifile
 make="make -f $makefile INFILE=${ifile} TMPDIR=${tmpdir}"
 
 
@@ -180,7 +195,7 @@ if $make outfile > /dev/null 2>&1
 then
   ofile=$($make outfile)
 else
-  ofile=${tmpdir}/$( echo ${ifile}  | sed 's|/|_|g' | sed 's|\.|_|g').htmlxx
+  ofile=${tmpdir}/$( echo ${ifile}  | sed 's|/|_|g' | sed 's|\.|_|g').html
 fi
 make="$make OUTFILE=${ofile}"
 
