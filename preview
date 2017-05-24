@@ -102,16 +102,25 @@ shift
 if [ $print_makefile -eq 0 ]; then
   if [ ! -e "$ifile" ]; then
     last_ifile=$(cat ~/.preview/last_ifile)
-    if which Xdialog > /dev/null 2>&1 
+    if which zenity > /dev/null 2>&1 
+    then
+      ifile=$(zenity --file-selection --title="Select a File." 2>/dev/null)
+    elif which Xdialog > /dev/null 2>&1 
     then
       ifile=$(Xdialog --no-buttons -fselect "$last_ifile" 0 0 2>&1)
-    #elif which dialog 2>&1 > /dev/null
-    #then
-      #ifile=$(dialog --fselect '' 0 0)
+    elif which dialog > /dev/null 2>&1
+    then
+      print "HUH"
+      ifile=$(dialog --fselect '' 0 0)
     else
       read -p "What file would you like to preview?" ifile
     fi
   fi
+fi
+
+if [ ! -f "$ifile" ]; then
+  echo "Input file '${ifile}' does not exist or is not a file."
+  exit 1
 fi
 
 tmpdir=$(mktemp -d)

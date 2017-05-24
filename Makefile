@@ -1,4 +1,4 @@
 install:
-	sudo cp preview /usr/bin
+	cp preview ~/bin
 	mkdir -p ~/.preview
 	cp examples/Makefile* ~/.preview
