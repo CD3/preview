@@ -4,8 +4,6 @@ Title
 body text
 body text
 
-
-
 some more
 
 more...

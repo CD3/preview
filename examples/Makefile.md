@@ -1,14 +1,14 @@
-.PHONY: outfile
-outfile:
-	@echo $(TMPDIR)/$$( echo $(INFILE)  | sed 's|/|_|g' | sed 's|\.|_|g').pdf
+.PHONY: logfile
+logfile:
+	@echo $(INDIR)/preview.log
 
 .PHONY: build
 build:
-	@pandoc -f markdown_github -o $(OUTFILE) $(INFILE)
+	pandoc -f markdown -t latex -o $(OUTFILE).pdf $(INFILE) || zenity --error --no-markup --text="There was a problem building the preview.\nCommand output was saved to $(LOGFILE)"
 
 .PHONY: view
 view:
-	@zathura $(OUTFILE) 1>/dev/null 2>/dev/null
+	zathura $(OUTFILE).pdf 1>/dev/null 2>/dev/null
 
 .PHONY: refresh
 refresh:
