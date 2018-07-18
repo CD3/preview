@@ -112,7 +112,7 @@ shift
 
 if [ $print_makefile -eq 0 ]; then
   if [ ! -e "$ifile" ]; then
-    last_ifile=$(cat ~/.preview/last_ifile | echo "")
+    last_ifile=$(cat ~/.preview/last_ifile || echo "")
     if which zenity > /dev/null 2>&1 
     then
       ifile=$(zenity --file-selection --title="Select a file." --filename=${last_ifile} 2>/dev/null)
