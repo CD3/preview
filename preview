@@ -37,7 +37,7 @@ These variables will be passed into the makefile by 'preview', and can be used i
 
 INFILE  - the name of the source file to be previewed.
 INDIR   - the directory containing the source file.
-OUTFILE - the name of the generated file that will be viewed by the viewer.
+OUTFILE - the name that `preview` expects for the generated file that will be viewed by the viewer. The Makefile can just ignore this and use its own if it wants.
 LOGFILE - the name of a file that command output will be written to.
 TMPDIR  - the name of a temperary directory that has been created by 'preview'. If you want the output files to be generated in a temp
           directory, you should prepend the output filename with this directory.
@@ -65,6 +65,17 @@ Options:
 EOF
 }
 
+declare -A LOG_LEVELS
+# https://en.wikipedia.org/wiki/Syslog#Severity_level
+LOG_LEVELS=([0]="error" [1]="info" [2]="debug")
+function .log () {
+  local LEVEL=${1}
+  shift
+  if [ ${__VERBOSE} -ge ${LEVEL} ]; then
+    echo "[${LOG_LEVELS[$LEVEL]}]" "$@"
+  fi
+}
+
 # the getopt command is external to the shell. essentially what it
 # does is parse the command line parameters and rearrange them so
 # that all of the options are given before any of the arguments, and
@@ -79,19 +90,24 @@ EOF
 # two colons (::) after an option means it has a optional argument
 
 
-NEW_COMMAND_LINE=$(getopt -o hpf: -l print_makefile,help,makefile: -n preview -- "$@")   # this creates a rearranged version of the command line
-if [ $? != 0 ] ; then echo "getopt returned an error, Terminating..." >&2 ; exit 1 ; fi
+NEW_COMMAND_LINE=$(getopt -o hpf:v -l print_makefile,help,makefile:,verbose -n preview -- "$@")   # this creates a rearranged version of the command line
+if [ $? != 0 ] ; then .log 0 "getopt returned an error, Terminating..." >&2 ; exit 1 ; fi
 eval set -- "$NEW_COMMAND_LINE"                                                                          # this sets up positional parameters to the new command line
 
 
 # now we can just manually loop through the positional parameters
 print_makefile=0
 makefile=""
+__VERBOSE=0
 while true ; do
   case "$1" in
     -h|--help)
         print_usage
         exit;
+        ;;
+    -v|--verbose)
+        __VERBOSE=1
+        shift 1
         ;;
     -p|--print_makefile)
         print_makefile=1
@@ -102,7 +118,7 @@ while true ; do
         shift 2
         ;;
     --) shift ; break ;;
-     *) echo "Unreconized option got through: '$1'" ; exit 1 ;;
+     *) .log 0 "Unreconized option got through: '$1'" ; exit 1 ;;
   esac
 done
 
@@ -129,7 +145,7 @@ if [ $print_makefile -eq 0 ]; then
 fi
 
 if [ ! -f "$ifile" ]; then
-  echo "Input file '${ifile}' does not exist or is not a file."
+  .log 0 "Input file '${ifile}' does not exist or is not a file."
   exit 1
 fi
 
@@ -194,7 +210,7 @@ EOF
 fi
 
 
-echo "Using '$makefile' for makefile"
+.log 2 "Using '$makefile' for makefile"
 
 if [ $print_makefile -eq 1 ]
 then
@@ -212,7 +228,7 @@ ifile=$(readlink -f $ifile)
 idir=$(dirname $ifile)
 echo $ifile > ~/.preview/last_ifile
 make="make -f $makefile INFILE=${ifile} INDIR=${idir} TMPDIR=${tmpdir}"
-echo $make
+.log 2 $make
 
 # get output filename
 if $make outfile > /dev/null 2>&1
@@ -227,7 +243,11 @@ if $make logfile > /dev/null 2>&1
 then
   lfile=$($make logfile)
 else
-  lfile="/dev/stdout"
+  if [ ${__VERBOSE} -ge 1 ]; then
+    lfile="/dev/stdout"
+  else
+    lfile="/dev/null"
+  fi
 fi
 
 make="$make OUTFILE=${ofile} LOGFILE=${lfile}"
@@ -235,12 +255,37 @@ make="$make OUTFILE=${ofile} LOGFILE=${lfile}"
 
 
 
-echo "variables:"
-echo "INFILE: $ifile"
-echo "OUTFILE: $ofile"
-echo "LOGFILE: $lfile"
-echo "INDIR: $idir"
-echo "TMPDIR: $tmpdir"
+.log 3 "variables:"
+.log 3 "INFILE: $ifile"
+.log 3 "OUTFILE: $ofile"
+.log 3 "LOGFILE: $lfile"
+.log 3 "INDIR: $idir"
+.log 3 "TMPDIR: $tmpdir"
+
+_cleanup() {
+        .log 2 "Making sure child processed have been cleaned up..."
+        for pid in $viewPIDs $viewPID $entrPIDs $entrPID
+        do
+                if kill -s 0 $pid > /dev/null 2>&1
+                then
+                        kill $pid
+                fi
+        done
+}
+trap _cleanup SIGTERM
+trap _cleanup SIGINT
+
+list_children()
+{
+  local children=$(ps -o pid= --ppid "$1")
+
+  for pid in $children
+  do
+    list_children "$pid"
+  done
+
+  echo "$children"
+}
 
 $make build > ${lfile} 2>&1
 $make view >> ${lfile} 2>&1 &
@@ -250,5 +295,13 @@ sleep 0.1
 ls $ifile | entr sh -c "$make build > ${lfile} 2>&1 && $make refresh" >> ${lfile} 2>&1 &
 entrPID=$!
 
+sleep 0.1
+
+viewPIDs=$(list_children $viewPID)
+entrPIDs=$(list_children $entrPID)
+
+
+.log 2 "entr PID: $entrPID"
+.log 2 "view PID: $viewPID"
 wait $viewPID
 kill $entrPID
