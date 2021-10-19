@@ -1,4 +1,0 @@
-pandoc -f markdown -t latex -o /tmp/tmp.BVTWmsFoIg/test.pdf /home/cclark/Code/sync/projects/preview/examples/test.md || zenity --error --no-markup --text="There was a problem building the preview.\nCommand output was saved to ./preview.log."
-zathura /tmp/tmp.BVTWmsFoIg/test.pdf 1>/dev/null 2>/dev/null
-pandoc -f markdown -t latex -o /tmp/tmp.BVTWmsFoIg/test.pdf /home/cclark/Code/sync/projects/preview/examples/test.md || zenity --error --no-markup --text="There was a problem building the preview.\nCommand output was saved to ./preview.log."
-make: Nothing to be done for 'cleanup'.

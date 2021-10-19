@@ -79,6 +79,8 @@ $ preview -v -v -v notes.md
 [debug] Making sure child processed have been cleaned up...
 ```
 
+![](./demos/MarkdownDemo.gif)
+
 ### Gnuplot
 
 This Makefile will generate a PNG image from a Gnuplot script and open it in `feh`, which is configured to refresh every 2 seconds.
@@ -117,3 +119,5 @@ cleanup:
 	sexpect -sock preview-gnuplot.sock send 'exit' -cr
 	sexpect -sock preview-gnuplot.sock wait
 ```
+
+![](./demos/GnuplotDemo.gif)
