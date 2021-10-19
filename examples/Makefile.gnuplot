@@ -1,10 +1,17 @@
-outfile:
-	@echo $(basename $(INFILE)).png
+setup:
 
-build:
-	pictify.sh $(INFILE)
-
-view:
-	feh -R 2 $(OUTFILE) 2>/dev/null
+start:
+	sexpect -sock preview-gnuplot.sock spawn gnuplot
+	zenity --info --no-markup --text="Click 'OK' when you are done to close the preview."
+	
 
 refresh:
+	sexpect -sock preview-gnuplot.sock send 'load "$(INFILE_ABS)"' -cr
+
+stop:
+	sexpect -sock preview-gnuplot.sock send 'exit' -cr
+	sexpect -sock preview-gnuplot.sock wait
+
+cleanup:
+	sexpect -sock preview-gnuplot.sock send 'exit' -cr
+	sexpect -sock preview-gnuplot.sock wait

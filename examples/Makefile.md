@@ -1,14 +1,24 @@
 .PHONY: logfile
 logfile:
-	@echo $(INDIR)/preview.log
+	@echo ./preview.log
 
 .PHONY: build
 build:
-	pandoc -f markdown -t latex -o $(OUTFILE).pdf $(INFILE) || zenity --error --no-markup --text="There was a problem building the preview.\nCommand output was saved to $(LOGFILE)"
+	pandoc -f markdown -t latex -o $(TMPDIR)/$(INFILE_STEM).pdf $(INFILE) || zenity --error --no-markup --text="There was a problem building the preview.\nCommand output was saved to $(LOGFILE)."
 
-.PHONY: view
-view:
-	zathura $(OUTFILE).pdf 1>/dev/null 2>/dev/null
+.PHONY: setup
+setup: build
+
+.PHONY: start
+start:
+	zathura $(TMPDIR)/$(INFILE_STEM).pdf 1>/dev/null 2>/dev/null
 
 .PHONY: refresh
-refresh:
+refresh: build
+
+.PHONY: stop
+stop:
+
+.PHONY: cleanup
+cleanup:
+

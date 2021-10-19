@@ -1,2 +1,4 @@
-pandoc -f markdown -t latex -o /tmp/tmp.4jLuD9WYkw/_home_cclark_Code_sync_projects_preview_examples_test_md.pdf /home/cclark/Code/sync/projects/preview/examples/test.md || zenity --error --no-markup --text="There was a problem building the preview.\nCommand output was saved to /home/cclark/Code/sync/projects/preview/examples/preview.log"
-make: Nothing to be done for 'refresh'.
+pandoc -f markdown -t latex -o /tmp/tmp.BVTWmsFoIg/test.pdf /home/cclark/Code/sync/projects/preview/examples/test.md || zenity --error --no-markup --text="There was a problem building the preview.\nCommand output was saved to ./preview.log."
+zathura /tmp/tmp.BVTWmsFoIg/test.pdf 1>/dev/null 2>/dev/null
+pandoc -f markdown -t latex -o /tmp/tmp.BVTWmsFoIg/test.pdf /home/cclark/Code/sync/projects/preview/examples/test.md || zenity --error --no-markup --text="There was a problem building the preview.\nCommand output was saved to ./preview.log."
+make: Nothing to be done for 'cleanup'.

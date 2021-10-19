@@ -13,9 +13,11 @@ a just a few of the situations that motivated this script
 `preview` uses `entr` to trigger commands when a file is updated. A `Makefile` is used to trigger the commands, so it is completely customizable. All that
 is needed for preview to work is a `Makefile` that contains 3 targets (it may define more that 3, but these are the three that will be used).
 
-- build : `make build` is ran to generate the output file from the source file
-- view : `make view` is ran to open the output file for viewing
-- refresh : `make refresh` is ran to refresh the viewer when an update occurs.
+- setup : `make setup` is ran before the view process is started.
+- start : `make start` is ran to start a process for viewing the preview (i.e. a PDF viewer or browser).
+- refresh : `make refresh` is ran every time the source file is modified (using `entr`).
+- stop : `make stop` is ran when `preview` recieves a `SIGTERM` (i.e. ctrl-c).
+- cleanup : `make cleanup` is ran after the processes started by `make start` terminates.
 
 `preview` simply does a little bit of work so that a build and refresh occur when the source file being "previewed" is modified, so the preview
 can be updated automatically.
@@ -30,5 +32,5 @@ used:
 - A file named `Makefile` in the directory of the source file.
 - A file named `Makefile` in the directory `~/.preview`.
 
-If no `Makefile` can be found, then a default `Makefile` (stored in the script itself) is used. The default `Makefile` previews Markdown using the 
-`pandoc` to generate an HTML file and the `vimb` browser.
+If no `Makefile` can be found, then a default `Makefile` (stored in the script itself) is used. The default `Makefile` previews Markdown using
+`pandoc` to generate PDF file and opens it using the `zathura` PDF viewer.

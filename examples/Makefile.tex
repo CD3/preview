@@ -1,10 +1,9 @@
-outfile:
-	@echo $(basename $(INFILE)).png
-
 build:
-	tex2im -n -o $(OUTFILE) $(INFILE)
+	tex2im -n -o $(TMPDIR)/$(INFILE_STEM).png $(INFILE_ABS)
 
-view:
-	feh -R 2 $(OUTFILE) 2>/dev/null
+start:
+	feh -R 2 $(TMPDIR)/${INFILE_STEM}.png 2>/dev/null
 
-refresh:
+setup: build
+
+refresh: build
