@@ -106,7 +106,7 @@ while true ; do
         exit;
         ;;
     -v|--verbose)
-        __VERBOSE=1
+        __VERBOSE=$(($__VERBOSE + 1))
         shift 1
         ;;
     -p|--print_makefile)
