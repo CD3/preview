@@ -1,9 +1,0 @@
-mkdir -p /tmp/tmp.D8RvdD9sHm
-pandoc -f markdown -t latex -o /tmp/tmp.D8RvdD9sHm/README.pdf /home/cclark/Code/sync/projects/preview/README.md || zenity --error --no-markup --text="There was a problem building the preview.\nCommand output was saved to ./preview.log"
-zathura /tmp/tmp.D8RvdD9sHm/README.pdf 1>/dev/null 2>/dev/null
-mkdir -p /tmp/tmp.D8RvdD9sHm
-pandoc -f markdown -t latex -o /tmp/tmp.D8RvdD9sHm/README.pdf /home/cclark/Code/sync/projects/preview/README.md || zenity --error --no-markup --text="There was a problem building the preview.\nCommand output was saved to ./preview.log"
-make: *** [/home/cclark/.preview/Makefile.md:12: view] Terminated
-make: Nothing to be done for 'stop'.
-echo "cleaning up..."
-cleaning up...

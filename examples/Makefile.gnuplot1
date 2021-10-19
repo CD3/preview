@@ -1,0 +1,10 @@
+build:
+	gnuplot -e 'set term png; set output "$(TMPDIR)/$(INFILE_STEM).png"' $(INFILE_ABS)
+
+setup: build
+
+start:
+	feh -R 2 $(TMPDIR)/$(INFILE_STEM).png
+
+refresh: build
+

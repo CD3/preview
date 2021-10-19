@@ -34,3 +34,86 @@ used:
 
 If no `Makefile` can be found, then a default `Makefile` (stored in the script itself) is used. The default `Makefile` previews Markdown using
 `pandoc` to generate PDF file and opens it using the `zathura` PDF viewer.
+
+## Examples
+
+### Markdown
+
+This Makefile will compile a Markdown file to PDF, using the `pandoc` document converter, 
+and open it in `zathura`. When the Markdown file is modified, `preview` will automatically
+recompile the PDF.
+
+```
+build:
+	pandoc -f markdown -t latex -o $(TMPDIR)/$(INFILE_STEM).pdf $(INFILE)
+
+setup: build
+
+start:
+	zathura $(TMPDIR)/$(INFILE_STEM).pdf 1>/dev/null 2>/dev/null
+
+refresh: build
+```
+To preview a file named `notes.md`, create a Makefile named `Makefile.md` in the same directory
+and run
+```
+$ preview notes.md
+```
+You can increase the verbosity to see the output of commands
+```
+$ preview -v -v -v notes.md
+[debug] Using '/home/cclark/.preview/Makefile.md' for makefile
+[debug] make -f /home/cclark/.preview/Makefile.md INFILE=/home/cclark/Code/sync/projects/preview/README.md INFILE_ABS=/home/cclark/Code/sync/projects/preview/README.md INFILE_NAME=README.md INFILE_EXT=md INFILE_STEM=README INDIR=/home/cclark/Code/sync/projects/preview TMPDIR=/tmp/tmp.vpy4ppWySC
+[] variables:
+[] INFILE_ABS: /home/cclark/Code/sync/projects/preview/README.md
+[] INFILE_NAME: README.md
+[] INFILE_STEM: README
+[] INFILE_EXT: md
+[] INFILE: /home/cclark/Code/sync/projects/preview/README.md
+[] LOGFILE: ./preview.log
+[] INDIR: /home/cclark/Code/sync/projects/preview
+[] TMPDIR: /tmp/tmp.vpy4ppWySC
+[debug] entr PID: 1656962
+[debug] start PID: 1656954
+[debug] Running 'make cleanup'...
+[debug] Making sure child processed have been cleaned up...
+```
+
+### Gnuplot
+
+This Makefile will generate a PNG image from a Gnuplot script and open it in `feh`, which is configured to refresh every 2 seconds.
+
+```
+build:
+	gnuplot -e 'set term png; set output "$(TMPDIR)/$(INFILE_STEM).png"' $(INFILE_ABS)
+
+setup: build
+
+start:
+	feh -R 2 $(TMPDIR)/$(INFILE_STEM).png
+
+refresh: build
+```
+This is useful for developing scripts to generate figures for a paper (you could generate a postscript or PDF if you prefer), but it does not let you interact with plot window like
+a an interactive gnuplot session does. This Makefile will used [sexpect](https://github.com/clarkwang/sexpect) to open a interactive gnuplot session in the background and reload the script
+when it changes.
+```
+setup:
+
+start:
+	sexpect -sock preview-gnuplot.sock spawn gnuplot
+	zenity --info --no-markup --text="Click 'OK' when you are done to close the preview."
+	
+
+refresh:
+	sexpect -sock preview-gnuplot.sock send 'load "$(INFILE_ABS)"' -cr
+	sexpect -sock preview-gnuplot.sock expect
+
+stop:
+	sexpect -sock preview-gnuplot.sock send 'exit' -cr
+	sexpect -sock preview-gnuplot.sock wait
+
+cleanup:
+	sexpect -sock preview-gnuplot.sock send 'exit' -cr
+	sexpect -sock preview-gnuplot.sock wait
+```
