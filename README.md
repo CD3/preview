@@ -121,3 +121,7 @@ cleanup:
 ```
 
 ![](./demos/GnuplotDemo.gif)
+
+## Using in an editor
+
+`preview` can be called directly from your favorite text editor using your preferred method for asynchronous job control.
