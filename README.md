@@ -10,8 +10,8 @@ a just a few of the situations that motivated this script
 
 ## What it does
 
-`preview` uses `entr` to trigger commands when a file is updated. A `Makefile` is used to trigger the commands, so it is completely customizable. All that
-is needed for preview to work is a `Makefile` that contains 3 targets (it may define more that 3, but these are the three that will be used).
+`preview` uses `entr` to trigger commands when a file is updated. A `Makefile` is used to execute the commands, so it is completely customizable. All that
+is needed for preview to work is a `Makefile` that contains 5 targets (it may define more that 5, but these are the five that will be used).
 
 - setup : `make setup` is ran before the view process is started.
 - start : `make start` is ran to start a process for viewing the preview (i.e. a PDF viewer or browser).
@@ -19,7 +19,7 @@ is needed for preview to work is a `Makefile` that contains 3 targets (it may de
 - stop : `make stop` is ran when `preview` recieves a `SIGTERM` (i.e. ctrl-c).
 - cleanup : `make cleanup` is ran after the processes started by `make start` terminates.
 
-`preview` simply does a little bit of work so that a build and refresh occur when the source file being "previewed" is modified, so the preview
+`preview` simply does a little bit of work so that a refresh occur when the source file being "previewed" is modified, so the preview
 can be updated automatically.
 
 ## Makefiles
