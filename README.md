@@ -124,4 +124,5 @@ cleanup:
 
 ## Using in an editor
 
-`preview` can be called directly from your favorite text editor using your preferred method for asynchronous job control.
+`preview` can be called directly from your favorite text editor using your preferred method for asynchronous job control. For example, the [asyncrun.vim](https://github.com/skywind3000/asyncrun.vim) plugin:
+![](./demos/VimDemo.gif)
