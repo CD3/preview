@@ -8,6 +8,39 @@ a just a few of the situations that motivated this script
 - gnuplot : It is nice to be able to see a preview of a plot generated with gnuplot while editing the script.
 - Latex Snippets : I use LaTeX/circuitikz to create circuit diagrams and `tex2im` to create the image files. `preview` lets me see the image while I edit the LaTeX.
 
+## Install
+
+`preview` is a single bash script. To install it, you just need to make it executable and put it in a directory in your `PATH` variable. You can also run the `./install.sh` script
+to automate this, which will also check that `entr` is installed and offer to install it if not. For example, in a docker shell:
+```
+root@8119d82073e2:/home/sandbox/cwd# bash install.sh 
+Found the following (writable) directories in your PATH.
+install.sh: line 32: cancel: command not found
+If you would like to install to a different directory, select , add it to your PATH, and rerun.
+1) cancel
+2) /bin
+3) /sbin
+4) /usr/bin
+5) /usr/local/bin
+6) /usr/local/sbin
+7) /usr/sbin
+Which directory would you like to install into? 4
+Installing 'preview' into '/usr/bin'
+The 'entr' command is required by 'preview', but was not found. Would you like to install it?
+Y/n: y
+Downloading 'entr' source to '/tmp/tmp.SskiRxvA5L'.
+cp Makefile.linux Makefile
+cc  -D_GNU_SOURCE -D_LINUX_PORT -Imissing -DRELEASE=\"5.0\"  missing/strlcpy.c missing/kqueue_inotify.c entr_spec.c -o entr_spec
+cc  -D_GNU_SOURCE -D_LINUX_PORT -Imissing -DRELEASE=\"5.0\"  missing/strlcpy.c missing/kqueue_inotify.c entr.c -o entr
+Running unit tests
+Xsh returned exit code 86
+26 of 26 tests PASSED
+install entr /tmp/tmp.SskiRxvA5L/entr-5.0/bin
+install -m 644 entr.1 /tmp/tmp.SskiRxvA5L/entr-5.0/share/man/man1
+Installed 'entr' into '/usr/bin'.
+root@8119d82073e2:/home/sandbox/cwd# 
+```
+
 ## What it does
 
 `preview` uses `entr` to trigger commands when a file is updated. A `Makefile` is used to execute the commands, so it is completely customizable. All that

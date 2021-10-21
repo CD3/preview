@@ -1,5 +1,22 @@
 #! /bin/bash
 
+ENTR=$(which entr)
+MAKE=$(which make)
+
+if [[ -z $ENTR ]]
+then
+        echo '`entr` is required to run `preview` but was not found. Please install it and run again.'
+        exit 1
+fi
+
+if [[ -z $MAKE ]]
+then
+        echo '`make` is required to run `preview` but was not found. Please install it and run again.'
+        exit 1
+fi
+
+
+
 function print_usage()
 {
 cat <<EOF
@@ -236,7 +253,7 @@ ifile_ext="${ifile_name##*.}"
 ifile_stem="${ifile_name%.*}"
 
 echo $ifile > ~/.preview/last_ifile
-make="make -f $makefile INFILE=${ifile} INFILE_ABS=${ifile} INFILE_NAME=${ifile_name} INFILE_EXT=${ifile_ext} INFILE_STEM=${ifile_stem} INDIR=${idir} TMPDIR=${tmpdir}"
+make="$MAKE -f $makefile INFILE=${ifile} INFILE_ABS=${ifile} INFILE_NAME=${ifile_name} INFILE_EXT=${ifile_ext} INFILE_STEM=${ifile_stem} INDIR=${idir} TMPDIR=${tmpdir}"
 .log 2 $make
 
 # get log filename
@@ -303,7 +320,7 @@ $make start >> ${lfile} 2>&1 &
 startPID=$!
 sleep 0.1
 
-ls $ifile | entr sh -c "$make refresh" >> ${lfile} 2>&1 &
+echo $ifile | $ENTR sh -c "$make refresh" >> ${lfile} 2>&1 &
 entrPID=$!
 
 sleep 0.1
