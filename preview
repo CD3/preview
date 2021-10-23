@@ -106,7 +106,7 @@ function .log () {
 # two colons (::) after an option means it has a optional argument
 
 
-NEW_COMMAND_LINE=$(getopt -o hpf:ve: -l print_makefile,help,makefile:,verbose,ext: -n preview -- "$@")   # this creates a rearranged version of the command line
+NEW_COMMAND_LINE=$(getopt -o hpf:vde: -l print_makefile,help,makefile:,verbose,debug,ext: -n preview -- "$@")   # this creates a rearranged version of the command line
 if [ $? != 0 ] ; then .log 0 "getopt returned an error, Terminating..." >&2 ; exit 1 ; fi
 eval set -- "$NEW_COMMAND_LINE"                                                                          # this sets up positional parameters to the new command line
 
@@ -124,6 +124,10 @@ while true ; do
         ;;
     -v|--verbose)
         __VERBOSE=$(($__VERBOSE + 1))
+        shift 1
+        ;;
+    -d|--debug)
+        __VERBOSE=2
         shift 1
         ;;
     -p|--print_makefile)
@@ -312,13 +316,16 @@ list_children()
 {
   local children=$(ps -o pid= --ppid "$1")
 
-  for pid in $children
-  do
+  for pid in $children do
     list_children "$pid"
   done
 
   echo "$children"
 }
+
+
+
+
 
 $make setup >> ${lfile} 2>&1
 $make start >> ${lfile} 2>&1 &
