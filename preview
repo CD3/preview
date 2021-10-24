@@ -312,11 +312,12 @@ trap _stop SIGTERM
 trap _stop SIGINT
 trap _cleanup EXIT
 
-list_children()
+function list_children()
 {
   local children=$(ps -o pid= --ppid "$1")
 
-  for pid in $children do
+  for pid in $children
+  do
     list_children "$pid"
   done
 
