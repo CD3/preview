@@ -1,12 +1,26 @@
 # `preview`
 
-`preview` is a simple bash script that allows you to preview a file/document/image that is generated from a source file. For example, if you are
-writing a Markdown file and you want to see a preview of what it will look like in HTML. There are many situations when this is useful, here are
-a just a few of the situations that motivated this script
+`preview` is a simple bash script that allows you to preview a
+file/document/image that is generated from a source file. For example, if you
+are writing a Markdown file and you want to see a preview of what it will look
+like in HTML. There are many situations when this is useful, here are a just a
+few of the ones that motivated this script
 
 - Markdown : The most common scenario. I use `vim` and couldn't find a good markdown previewer that I liked.
 - gnuplot : It is nice to be able to see a preview of a plot generated with gnuplot while editing the script.
 - Latex Snippets : I use LaTeX/circuitikz to create circuit diagrams and `tex2im` to create the image files. `preview` lets me see the image while I edit the LaTeX.
+
+Several good tools for previewing certain types of files already exist.
+For example, [`grip`](https://github.com/joeyespo/grip) provides a GitHub-README-style preview of markdown files.
+`preview` does not replace these, it just provides a uniform interface to using them.
+
+**Features:**
+
+- Small, simple bash script.
+- Handles a wide variety of use cases with Makefile-based handlers.
+- Easily override default handler for all files in a directory.
+- Monitor _multiple_ files for changes to trigger preview update.
+- Easily integrates with text editors that support async job control (vim/nvim, emacs, etc.)
 
 ## Install
 
