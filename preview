@@ -20,10 +20,11 @@ fi
 function print_usage()
 {
 cat <<EOF
-Usage: preview [options] [FILE]
+Usage: preview [options] [FILE] [ADDITIONAL FILES TO WATCH...]
 
 'preview' allows you to quickly preview a file from its source, for example markdown files.
 It uses the 'entr' command to monitor the source file and automatically update the preview.
+If additional files are passed, the preview will be updated when any of them change.
 
 'preview' uses a makefile to execute the commands required to build, view, and refresh the preview.
 If a makefile is found in the current directory, it will be used, otherwise a default makefile is used.
@@ -74,8 +75,11 @@ You can run:
 to see the makefile that is used by 'preview' by default.
 
 Options:
+      -v --verbose Increase verbosity.
+      -d --debug Enable debug output.
       -p --print-makefile  Print the makefile that will be used and exit.
       -f --makefile FILE Use FILE instead of default makefile.
+      -e --ext EXT Use EXT for extension rather than detecting.
 
 
 EOF
@@ -255,8 +259,8 @@ if [ ! -e "$ifile" ]; then
 fi
 
 
-ifile=$(readlink -f $ifile)
-idir=$(dirname $ifile)
+ifile=$(readlink -f "$ifile")
+idir=$(dirname "$ifile")
 ifile_name=$(basename $ifile)
 ifile_ext="${ifile_name##*.}"
 ifile_stem="${ifile_name%.*}"
@@ -333,7 +337,13 @@ $make start >> ${lfile} 2>&1 &
 startPID=$!
 sleep 0.1
 
-echo $ifile | $ENTR sh -c "$make refresh" >> ${lfile} 2>&1 &
+echo $ifile > "$tmpdir/files.txt"
+for file in "${@}"
+do
+        readlink -f "${file}" >> "$tmpdir/files.txt"
+done
+
+cat $tmpdir/files.txt | $ENTR sh -c "$make refresh" >> ${lfile} 2>&1 &
 entrPID=$!
 
 sleep 0.1
