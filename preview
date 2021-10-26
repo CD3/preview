@@ -265,8 +265,10 @@ ifile_name=$(basename $ifile)
 ifile_ext="${ifile_name##*.}"
 ifile_stem="${ifile_name%.*}"
 
+pidfile="${tmpdir}/pids"
+
 echo $ifile > ~/.preview/last_ifile
-make="$MAKE -f $makefile INFILE=${ifile} INFILE_ABS=${ifile} INFILE_NAME=${ifile_name} INFILE_EXT=${ifile_ext} INFILE_STEM=${ifile_stem} INDIR=${idir} TMPDIR=${tmpdir}"
+make="$MAKE -f $makefile INFILE=${ifile} INFILE_ABS=${ifile} INFILE_NAME=${ifile_name} INFILE_EXT=${ifile_ext} INFILE_STEM=${ifile_stem} INDIR=${idir} TMPDIR=${tmpdir} PIDFILE=${pidfile}"
 .log 2 $make
 
 # get log filename
@@ -295,29 +297,25 @@ make="$make LOGFILE=${lfile}"
 .log 3 "LOGFILE: $lfile"
 .log 3 "INDIR: $idir"
 .log 3 "TMPDIR: $tmpdir"
+.log 3 "PIDFILE: $pidfile"
 
-_stop() {
-        .log 2 "Running 'make stop'..."
-        $make stop >> ${lfile} 2>&1
+
+
+function try_kill()
+{
+  # check that a proc is alive and then kill it
+  for PID in ${*}
+  do
+    if kill -s 0 $PID > /dev/null 2>&1
+    then
+      kill $PID
+    fi
+  done
 }
-_cleanup() {
-        .log 2 "Running 'make cleanup'..."
-        $make cleanup >> ${lfile} 2>&1
-        .log 2 "Making sure child processed have been cleaned up..."
-        for pid in $startPIDs $startPID $entrPIDs $entrPID
-        do
-                if kill -s 0 $pid > /dev/null 2>&1
-                then
-                        kill $pid
-                fi
-        done
-}
-trap _stop SIGTERM
-trap _stop SIGINT
-trap _cleanup EXIT
 
 function list_children()
 {
+  # list all of the children of a given PID
   local children=$(ps -o pid= --ppid "$1")
 
   for pid in $children
@@ -327,6 +325,43 @@ function list_children()
 
   echo "$children"
 }
+
+function kill_proc_and_children()
+{
+  # kill a given PID and all of its children
+  for KPID in ${*}
+  do
+    CPIDS=$(list_children $KPID)
+    try_kill $CPIDS $KPID 
+  done
+}
+
+function kill_saved_procs()
+{
+  # kill procs saved in text file
+  for file in ${*}
+  do
+    [[ -f $file ]] && kill_proc_and_children $(cat $file)
+  done
+}
+
+
+
+_stop() {
+        .log 2 "Running 'make stop'..."
+        $make stop >> ${lfile} 2>&1
+}
+_cleanup() {
+        .log 2 "Running 'make cleanup'..."
+        $make cleanup >> ${lfile} 2>&1
+        .log 2 "Making sure child processed have been cleaned up..."
+        kill_proc_and_children $startPID $entrPID
+        kill_saved_procs $pidfile
+}
+trap _stop SIGTERM
+trap _stop SIGINT
+trap _cleanup EXIT
+
 
 
 
@@ -340,10 +375,10 @@ sleep 0.1
 echo $ifile > "$tmpdir/files.txt"
 for file in "${@}"
 do
-        readlink -f "${file}" >> "$tmpdir/files.txt"
+  readlink -f "${file}" >> "$tmpdir/files.txt"
 done
 
-cat $tmpdir/files.txt | $ENTR sh -c "$make refresh" >> ${lfile} 2>&1 &
+cat $tmpdir/files.txt | $ENTR $make refresh >> ${lfile} 2>&1 &
 entrPID=$!
 
 sleep 0.1
@@ -355,4 +390,3 @@ entrPIDs=$(list_children $entrPID)
 .log 2 "entr PID: $entrPID"
 .log 2 "start PID: $startPID"
 wait $startPID
-kill $entrPID
