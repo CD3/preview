@@ -173,3 +173,91 @@ cleanup:
 
 `preview` can be called directly from your favorite text editor using your preferred method for asynchronous job control. For example, the [asyncrun.vim](https://github.com/skywind3000/asyncrun.vim) plugin:
 ![](./demos/VimDemo.gif)
+
+## Writing Makefiles
+
+`preview` uses `make` to run actions. After doing some work to setup, `preview` basically run the following script:
+```
+make setup
+make start &
+startPID=$!
+
+echo "${@}" | entr make refresh  &
+entrPID=$!
+
+wait $startPID
+
+make cleanup
+kill $startPID
+kill $entrPID
+```
+You can add support for new file types, or use a different viewer for an existing file type, by writing a Makefile that provides a set of make targets that will be called by `preview`.
+
+- `make setup` : This target can setup any files or services that are needed by the preview. Note that any resources that need to be released will need to be cleaned up in the `cleanup` target.
+- `make start` : This target should start the long running process that will be used to view the preview (i.e. a PDF viewer, browser, etc). Note that this process terminating is used to signal `preview` to quit, so it cannot return immediately. If your viewer command returns immediately, you can use something like `zenity` to open a pop up window that can be closed when you are done.
+- `make refresh` : This target is used to update the preview. It is ran whenever the source file changes using `entr`.
+- `make stop` : This target is called whenever `preview` receives a SIGINT or SIGTERM signal. It should do any cleanup that would normally be done by the view process being terminated.
+- `make cleanup` : This target is run after the `preview` script has finished and should perform any additional cleanup that won't be handled by simply killing the `entr` and `start` processes.
+
+In practice, I have found that `start`, `refresh`, and `cleanup` are ever really needed, but there may be a use case were having them separate is useful.
+
+### Cleaning up processes
+
+Your Makefile should be careful not create zombie processes.
+`preview` tries to clean up (kill) all processes that were created during the preview, but it can only do this for processes that it can detect were created.
+It does this by storing of the ID of processes that it creates, and then looking at the process table to recursively find all children of these processes. These
+processes are killed on exit.
+
+If your make targets only run non-forking commands that block until finished, then everything will be cleaned up correctly. However, if you put a command in the background with `&`, or
+if the command will start background processes itself, then these will not be cleaned up automatically.
+
+Consider the following Makefile, named `Makefile.proc_demo`
+```
+start:
+        zenity --info --text "This will NOT be closed" &
+        zenity --info --text "This WILL be closed"
+```
+The `start` target will open two [zenity](https://help.gnome.org/users/zenity/stable/) windows. The first is ran asynchronously and will return immediately, the second call will block. Running make in one terminal
+```
+$ make -f Makefile.proc_demo start
+```
+and looking at the process table in another will look something like this:
+```
+$ ps -a -o pid,ppid,pgid,cmd
+    PID    PPID    PGID CMD
+    690       1     690 xterm
+   9092       1    9092 make -f Makefile.proc_demo start
+   9094       1    9092 zenity --info --text This will NOT be closed
+   9095    9092    9092 /bin/sh -c zenity --info --text "This WILL be closed"
+   9096    9095    9092 zenity --info --text This WILL be closed
+   9097     692    9097 ps -a -o pid,ppid,pgid,cmd
+
+```
+The issue here is that the backgrounded `zenity` process (pid `9094`) is re-parented by the init process (pid `1`). There is no way to tell (as far as I know) that this process
+was created by the `make start` process. Running `preview` on a test file named `test.proc_demo` gives a process table that looks something like this:
+```
+    PID    PPID    PGID CMD
+    690       1     690 xterm
+   9269       1    9269 /bin/bash /usr/bin/preview test.proc_demo
+   9280    9269    9269 /usr/bin/make -f ./Makefile.proc_demo INFILE=/home/sandbox/cwd/examples/test.proc_demo INFILE_ABS=/home/sandbox/cwd/examples/test.proc_demo INFILE_NAME=test.proc_demo INFILE_EXT=proc_demo INFILE_STEM=test INDIR=/home/sandbox/cwd/examples TMPDIR=/tmp/tmp.E7EmCuEFhq PIDFILE=/tmp/tmp.E7EmCuEFhq/p
+   9283       1    9269 zenity --info --text This will NOT be closed
+   9284    9280    9269 /bin/sh -c zenity --info --text "This WILL be closed"
+   9285    9284    9269 zenity --info --text This WILL be closed
+   9287    9269    9269 /usr/bin/entr /usr/bin/make -f ./Makefile.proc_demo INFILE=/home/sandbox/cwd/examples/test.proc_demo INFILE_ABS=/home/sandbox/cwd/examples/test.proc_demo INFILE_NAME=test.proc_demo INFILE_EXT=proc_demo INFILE_STEM=test INDIR=/home/sandbox/cwd/examples TMPDIR=/tmp/tmp.E7EmCuEFhq PIDFILE=/tmp/tm
+   9296     692    9296 ps -a -o pid,ppid,pgid,cmd
+```
+This will result in one `zenity` window remaining open after `preview` exits because `preview` cannot detect that it was created by `make`. Note that, even if preview is killed before the second `zenity`
+process (pid `9285`) terminates, only one window will remain open because `preview` can tell that `9285` is a child of `9284` which is a child `9280` which is the `make` process and is stored by `preview`.
+
+`preview` provides a mechanism to resolve this, but it requires some help from the user. If you need to background a process in the Makefile, you can save its PID to a file so that it can be killed later. `preview` provides
+a make variable named `PIDFILE` for this. In the above example, rewriting the Makefile to
+```
+start:
+	zenity --info --text "This will NOT be closed" & echo $$! >> $(PIDFILE)
+	zenity --info --text "This WILL be closed"
+```
+will result in both `zenity` windows being closed. This works by saving the PID for the first process to the `$(PIDFILE)` (this is just a file named `pids` in the `$(TMPDIR)` directory). `preview` will kill all processes (and their children) stored in this file on exit. There are a couple of things to be careful with. First, the double dollar sign (`$$`) is required since `$` is a special character in make. Otherwise, make would run `echo !` instead of `echo $!`. Second, the `echo`
+command also needs to be on the same line as the backgrounded command since make will run each line in a separate process.
+
+Things are more complicated if your Makefile is going to run a command that creates background processes. In this case, you need to have some mechanism for getting the PID of the processes it creates, which
+you can then save to `$(PIDFILE)`, or telling the command to cleanup after itself. See the `Makefile.gnuplot` in `examples/` for an example of this.
