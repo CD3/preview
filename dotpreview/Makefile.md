@@ -1,8 +1,8 @@
-logfile:
-	@echo ./preview.log
+#logfile:
+#	@echo ./preview.log
 
 build:
-	pandoc -f markdown -t latex -o $(TMPDIR)/$(INFILE_STEM).pdf $(INFILE) || zenity --error --no-markup --text="There was a problem building the preview.\nCommand output was saved to $(LOGFILE)."
+	pndoc -f markdown -t latex -o $(TMPDIR)/$(INFILE_STEM).pdf $(INFILE) || zenity --error --no-markup --text="There was a problem building the preview.\nCommand output was saved to $(LOGFILE)."
 
 setup: build
 

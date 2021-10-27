@@ -276,11 +276,17 @@ if $make logfile > /dev/null 2>&1
 then
   lfile=$($make logfile)
 else
-  if [ ${__VERBOSE} -ge 1 ]; then
-    lfile="/dev/stdout"
-  else
-    lfile="/dev/null"
-  fi
+  lfile="preview.log"
+fi
+if [ ${__VERBOSE} -ge 2 ]; then
+STDOUT="/dev/stdout"
+else
+STDOUT="/dev/null"
+fi
+if [ ${__VERBOSE} -ge 1 ]; then
+STDERR="/dev/stderr"
+else
+STDERR="/dev/null"
 fi
 
 make="$make LOGFILE=${lfile}"
@@ -288,20 +294,20 @@ make="$make LOGFILE=${lfile}"
 
 
 
-.log 3 "variables:"
-.log 3 "INFILE_ABS: $ifile"
-.log 3 "INFILE_NAME: $ifile_name"
-.log 3 "INFILE_STEM: $ifile_stem"
-.log 3 "INFILE_EXT: $ifile_ext"
-.log 3 "INFILE: $ifile"
-.log 3 "LOGFILE: $lfile"
-.log 3 "INDIR: $idir"
-.log 3 "TMPDIR: $tmpdir"
-.log 3 "PIDFILE: $pidfile"
+.log 2 "variables:"
+.log 2 "INFILE_ABS: $ifile"
+.log 2 "INFILE_NAME: $ifile_name"
+.log 2 "INFILE_STEM: $ifile_stem"
+.log 2 "INFILE_EXT: $ifile_ext"
+.log 2 "INFILE: $ifile"
+.log 2 "LOGFILE: $lfile"
+.log 2 "INDIR: $idir"
+.log 2 "TMPDIR: $tmpdir"
+.log 2 "PIDFILE: $pidfile"
 
 
 
-function try_kill()
+function kill_if_running()
 {
   # check that a proc is alive and then kill it
   for PID in ${*}
@@ -313,50 +319,38 @@ function try_kill()
   done
 }
 
-function list_children()
+function family_tree()
 {
-  # list all of the children of a given PID
-  local children=$(ps -o pid= --ppid "$1")
-
-  for pid in $children
+  local PID
+  for PID in ${*}
   do
-    list_children "$pid"
-  done
-
-  echo "$children"
-}
-
-function kill_proc_and_children()
-{
-  # kill a given PID and all of its children
-  for KPID in ${*}
-  do
-    CPIDS=$(list_children $KPID)
-    try_kill $CPIDS $KPID 
+    family_tree $(ps -o pid= --ppid "$PID")
+    echo $PID
   done
 }
+
 
 function kill_saved_procs()
 {
   # kill procs saved in text file
   for file in ${*}
   do
-    [[ -f $file ]] && kill_proc_and_children $(cat $file)
+    [[ -f $file ]] && kill_if_running $( family_tree $(cat $file) )
   done
 }
 
-
-
 _stop() {
         .log 2 "Running 'make stop'..."
-        $make stop >> ${lfile} 2>&1
+        $make stop > >( tee -a ${lfile} > $STDOUT) 2> >(tee -a ${lfile} > $STDERR)
 }
 _cleanup() {
         .log 2 "Running 'make cleanup'..."
-        $make cleanup >> ${lfile} 2>&1
-        .log 2 "Making sure child processed have been cleaned up..."
-        kill_proc_and_children $startPID $entrPID
+        $make cleanup > >( tee -a ${lfile} > $STDOUT) 2> >(tee -a ${lfile} > $STDERR)
+        .log 2 "Making sure child procs that were created are cleaned up..."
+        kill_if_running $offspringPIDS
         kill_saved_procs $pidfile
+        # check for any other processes in our process group
+        kill_if_running $(ps -o pgid=,pid= | grep "^ *$$" | sed "s/^ \+[0-9]\+ \+//" | grep -v $$)
 }
 trap _stop SIGTERM
 trap _stop SIGINT
@@ -365,12 +359,15 @@ trap _cleanup EXIT
 
 
 
+PGID=$(ps -o pgid= $$)
 
 
-$make setup >> ${lfile} 2>&1
-$make start >> ${lfile} 2>&1 &
+
+$make setup > >( tee -a ${lfile} > $STDOUT) 2> >(tee -a ${lfile} > $STDERR)
+$make start > >( tee -a ${lfile} > $STDOUT) 2> >(tee -a ${lfile} > $STDERR) &
 startPID=$!
 sleep 0.1
+offspringPIDS=$(family_tree $startPID)
 
 echo $ifile > "$tmpdir/files.txt"
 for file in "${@}"
@@ -378,15 +375,16 @@ do
   readlink -f "${file}" >> "$tmpdir/files.txt"
 done
 
-cat $tmpdir/files.txt | $ENTR $make refresh >> ${lfile} 2>&1 &
+cat $tmpdir/files.txt | $ENTR $make refresh > >( tee -a ${lfile} > $STDOUT) 2> >(tee -a ${lfile} > $STDERR) &
 entrPID=$!
-
 sleep 0.1
+offspringPIDS="$offspringPIDS $(family_tree $entrPID)"
 
-startPIDs=$(list_children $startPID)
-entrPIDs=$(list_children $entrPID)
+
 
 
 .log 2 "entr PID: $entrPID"
 .log 2 "start PID: $startPID"
+.log 2 "offspring PIDs: $offspringPIDS"
+.log 2 "group ID: $PGID"
 wait $startPID

@@ -2,4 +2,4 @@ DESTDIR=~
 install:
 	cp preview $(DESTDIR)/bin
 	mkdir -p ~/.preview
-	cp examples/Makefile* ~/.preview
+	cp dotpreview/Makefile* ~/.preview
