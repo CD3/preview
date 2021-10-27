@@ -259,5 +259,9 @@ start:
 will result in both `zenity` windows being closed. This works by saving the PID for the first process to the `$(PIDFILE)` (this is just a file named `pids` in the `$(TMPDIR)` directory). `preview` will kill all processes (and their children) stored in this file on exit. There are a couple of things to be careful with. First, the double dollar sign (`$$`) is required since `$` is a special character in make. Otherwise, make would run `echo !` instead of `echo $!`. Second, the `echo`
 command also needs to be on the same line as the backgrounded command since make will run each line in a separate process.
 
+**Update:** `preview` now handles this case automatically by looking for processes in its process group.
+
 Things are more complicated if your Makefile is going to run a command that creates background processes. In this case, you need to have some mechanism for getting the PID of the processes it creates, which
 you can then save to `$(PIDFILE)`, or telling the command to cleanup after itself. See the `Makefile.gnuplot` in `examples/` for an example of this.
+
+
