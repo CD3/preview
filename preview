@@ -20,7 +20,7 @@ fi
 function print_usage()
 {
 cat <<EOF
-Usage: preview [options] [FILE] [ADDITIONAL FILES TO WATCH...]
+Usage: preview [options] [SOURCE FILE] [ADDITIONAL FILES TO WATCH...]
 
 'preview' allows you to quickly preview a file from its source, for example markdown files.
 It uses the 'entr' command to monitor the source file and automatically update the preview.
@@ -80,13 +80,14 @@ Options:
       -p --print-makefile  Print the makefile that will be used and exit.
       -f --makefile FILE Use FILE instead of default makefile.
       -e --ext EXT Use EXT for extension rather than detecting.
+      -l --local_link LEXT:GEXT Create a Makefile symlink in current directory with extension LEXT to a global Makefile in ~/.preview with extension GEXT
 
 
 EOF
 }
 
-declare -A LOG_LEVELS
 # https://en.wikipedia.org/wiki/Syslog#Severity_level
+declare -A LOG_LEVELS
 LOG_LEVELS=([0]="error" [1]="info" [2]="debug")
 function .log () {
   local LEVEL=${1}
@@ -110,7 +111,7 @@ function .log () {
 # two colons (::) after an option means it has a optional argument
 
 
-NEW_COMMAND_LINE=$(getopt -o hpf:vde: -l print_makefile,help,makefile:,verbose,debug,ext: -n preview -- "$@")   # this creates a rearranged version of the command line
+NEW_COMMAND_LINE=$(getopt -o hpf:vde:l: -l print_makefile,help,makefile:,verbose,debug,ext:local_link -n preview -- "$@")   # this creates a rearranged version of the command line
 if [ $? != 0 ] ; then .log 0 "getopt returned an error, Terminating..." >&2 ; exit 1 ; fi
 eval set -- "$NEW_COMMAND_LINE"                                                                          # this sets up positional parameters to the new command line
 
@@ -145,6 +146,32 @@ while true ; do
     -e|--ext)
         ext=$2
         shift 2
+        ;;
+    -l|--local_link)
+            local_ext=$(echo $2 | gawk -F: '{print $1}')
+            global_ext=$(echo $2 | gawk -F: '{print $2}')
+            local_file="Makefile.$local_ext"
+            global_file="Makefile.$global_ext"
+
+            link_cmd="ln -s ~/.preview/$global_file $local_file"
+            .log 2 "$link_cmd"
+            if [[ -e $local_file ]]
+            then
+                    if [[ -L "$local_file" ]]
+                    then
+                            rm $local_file
+                    else
+                            echo "Target file '$local_file' exists and is not a symlink. Please remove it and rerun if you really want to override it."
+                            exit 1
+                    fi
+            fi
+            if [[ ! -e $global_file ]]
+            then
+                    echo "Did not find '$global_file' in ~/.preview. Did you spell the extension correctly?"
+                    exit 1
+            fi
+            eval $link_cmd
+        exit 0
         ;;
     --) shift ; break ;;
      *) .log 0 "Unreconized option got through: '$1'" ; exit 1 ;;
