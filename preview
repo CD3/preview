@@ -1,27 +1,48 @@
 #! /bin/bash
 
-ENTR=$(which entr)
-MAKE=$(which make)
+entr=$(which entr)
+make=$(which make)
+getopt=$(which getopt)
 
-if [[ -z $ENTR ]]
+
+if [[ -z $entr ]]
 then
-        echo '`entr` is required to run `preview` but was not found. Please install it and run again.'
+        echo ''entr' is required to run 'preview' but was not found. Please install it and run again.'
         exit 1
 fi
 
-if [[ -z $MAKE ]]
+if [[ -z $make ]]
 then
-        echo '`make` is required to run `preview` but was not found. Please install it and run again.'
+        echo ''make' is required to run 'preview' but was not found. Please install it and run again.'
         exit 1
 fi
 
+if [[ -z $getopt ]]
+then
+        echo ''getopt' is required to run 'preview' but was not found. Please install it and run again.'
+        exit 1
+fi
 
 
 function print_usage()
 {
+
 cat <<EOF
 Usage: preview [options] [SOURCE FILE] [ADDITIONAL FILES TO WATCH...]
 
+Options:
+      -v --verbose              | Increase verbose level.
+      -d --debug                | Set verbose level to maximum.
+      -f --makefile             | FILE Use FILE instead of default makefile.
+      -h --handler HANDLER      | Use HANDLER for preview handler rather than detecting.
+      -l --local_link LEXT:GEXT | Create a Makefile symlink in current directory with extension LEXT to a global Makefile in ~/.preview with extension GEXT
+EOF
+
+}
+
+function print_help()
+{
+cat <<EOF
 'preview' allows you to quickly preview a file from its source, for example markdown files.
 It uses the 'entr' command to monitor the source file and automatically update the preview.
 If additional files are passed, the preview will be updated when any of them change.
@@ -30,13 +51,13 @@ If additional files are passed, the preview will be updated when any of them cha
 If a makefile is found in the current directory, it will be used, otherwise a default makefile is used.
 If you choose to use your own makefile, you must define the following targets
 
-setup - This target is ran once before the `start` target. It can be used to create/setup any files needed by the `start` target.
+setup - This target is ran once before the 'start' target. It can be used to create/setup any files needed by the 'start' target.
 
 start - This target is ran once to start the "viewing" process that will run during the entire preview. The preview will be stopped when this processed is killed/closed by the user.
 
 refresh - This target will be run every time the file being previewed is saved.
 
-stop - This target will be called when `preview` recieves a SIGTERM. It should perform any of the necessary cleanup.
+stop - This target will be called when 'preview' recieves a SIGTERM. It should perform any of the necessary cleanup.
 
 cleanup - This target will be run on normal exit (after the "viewing" process has terminated). It should perform any of the necessary cleanup.
 
@@ -70,19 +91,6 @@ Useful Tools for the Makefiles:
     - sexpect: a tool for starting and controlling interactive processes (like gnuplot).
     - grip: a python module and command line tool for previewing markdown in a browser.
 
-You can run:
-  > preview -p
-to see the makefile that is used by 'preview' by default.
-
-Options:
-      -v --verbose Increase verbosity.
-      -d --debug Enable debug output.
-      -p --print-makefile  Print the makefile that will be used and exit.
-      -f --makefile FILE Use FILE instead of default makefile.
-      -e --ext EXT Use EXT for extension rather than detecting.
-      -l --local_link LEXT:GEXT Create a Makefile symlink in current directory with extension LEXT to a global Makefile in ~/.preview with extension GEXT
-
-
 EOF
 }
 
@@ -92,10 +100,12 @@ LOG_LEVELS=([0]="error" [1]="info" [2]="debug")
 function .log () {
   local LEVEL=${1}
   shift
-  if [ ${__VERBOSE} -ge ${LEVEL} ]; then
+  if [ ${verbose_level} -ge ${LEVEL} ]; then
     echo "[${LOG_LEVELS[$LEVEL]}]" "$@"
   fi
 }
+
+
 
 # the getopt command is external to the shell. essentially what it
 # does is parse the command line parameters and rearrange them so
@@ -103,101 +113,93 @@ function .log () {
 # adds a '--' between the options and arguments. 
 # then you can setup a while loop to process options easily and terminate
 # it when you run into the '--'
-
-# both long and short options can be given
-# short options are passed to -o
-# long  options are passed to -l
-# a colon (:) after an option means it has a required argument
-# two colons (::) after an option means it has a optional argument
+NEW_COMMAND_LINE=$(getopt -o hfc::vdl: -l help,makefile:,config-dir:,verbose,debug,handler:,local-link: -n preview -- "$@")   # this creates a rearranged version of the command line
+if [ "$?" != "0" ] ; then echo "There was an error parsing the command line." >&2; exit 1 ; fi
+eval set -- "$NEW_COMMAND_LINE"
 
 
-NEW_COMMAND_LINE=$(getopt -o hpf:vde:l: -l print_makefile,help,makefile:,verbose,debug,ext:local_link -n preview -- "$@")   # this creates a rearranged version of the command line
-if [ $? != 0 ] ; then .log 0 "getopt returned an error, Terminating..." >&2 ; exit 1 ; fi
-eval set -- "$NEW_COMMAND_LINE"                                                                          # this sets up positional parameters to the new command line
-
-
-# now we can just manually loop through the positional parameters
-print_makefile=0
+verbose_level=0
 makefile=""
-__VERBOSE=0
-ext=""
+configdir="${HOME}/.preview"
+handler=""
+local_link=""
 while true ; do
   case "$1" in
     -h|--help)
+        print_help
         print_usage
         exit;
         ;;
     -v|--verbose)
-        __VERBOSE=$(($__VERBOSE + 1))
+        verbose_level=$(($verbose_level + 1))
         shift 1
         ;;
     -d|--debug)
-        __VERBOSE=2
-        shift 1
-        ;;
-    -p|--print_makefile)
-        print_makefile=1
+        verbose_level=2
         shift 1
         ;;
     -f|--makefile)
         makefile=$2
         shift 2
         ;;
-    -e|--ext)
-        ext=$2
+    -c|--config-dir)
+        configdir=$2
         shift 2
         ;;
-    -l|--local_link)
-            local_ext=$(echo $2 | gawk -F: '{print $1}')
-            global_ext=$(echo $2 | gawk -F: '{print $2}')
-            local_file="Makefile.$local_ext"
-            global_file="Makefile.$global_ext"
-
-            link_cmd="ln -s ~/.preview/$global_file $local_file"
-            .log 2 "$link_cmd"
-            if [[ -e $local_file ]]
-            then
-                    if [[ -L "$local_file" ]]
-                    then
-                            rm $local_file
-                    else
-                            echo "Target file '$local_file' exists and is not a symlink. Please remove it and rerun if you really want to override it."
-                            exit 1
-                    fi
-            fi
-            if [[ ! -e $global_file ]]
-            then
-                    echo "Did not find '$global_file' in ~/.preview. Did you spell the extension correctly?"
-                    exit 1
-            fi
-            eval $link_cmd
-        exit 0
+    --handler)
+        handler=$2
+        shift 2
+        ;;
+    -l|--local-link)
+        local_link="$2"
+        shift 2
         ;;
     --) shift ; break ;;
      *) .log 0 "Unreconized option got through: '$1'" ; exit 1 ;;
   esac
 done
+# handle options that don't require argument
+if [[ "x$local_link" != "x" ]]
+then
+    local_ext=$(echo $local_link | awk -F: '{print $1}')
+    global_ext=$(echo $local_link | awk -F: '{print $2}')
+    local_file="Makefile.$local_ext"
+    global_file="Makefile.$global_ext"
+
+    link_cmd="ln -s $configdir/$global_file $local_file"
+    .log 2 "$link_cmd"
+    if [[ -e $local_file ]]
+    then
+            if [[ -L "$local_file" ]]
+            then
+                    rm $local_file
+            else
+                    echo "Target file '$local_file' exists and is not a symlink. Please remove it and rerun if you really want to override it."
+                    exit 1
+            fi
+    fi
+    if [[ ! -e $configdir/$global_file ]]
+    then
+            echo "Did not find '$global_file' in $configdir. Did you spell the extension correctly?"
+            exit 1
+    fi
+    eval $link_cmd
+exit 0
+fi
 
 # arguments start at $1...
 ifile=${1}
 shift
 
-if [ $print_makefile -eq 0 ]; then
-  if [ ! -e "$ifile" ]; then
-    last_ifile=$(cat ~/.preview/last_ifile || echo "")
-    if which zenity > /dev/null 2>&1 
-    then
-      ifile=$(zenity --file-selection --title="Select a file." --filename=${last_ifile} 2>/dev/null)
-    elif which Xdialog > /dev/null 2>&1 
-    then
-      ifile=$(Xdialog --no-buttons -fselect "$last_ifile" 0 0 2>&1)
-    elif which dialog > /dev/null 2>&1
-    then
-      ifile=$(dialog --fselect '' 0 0)
-    else
-      read -p "What file would you like to preview?" ifile
-    fi
-  fi
+
+
+
+
+
+if [[ "x${ifile}" == "x" ]]
+then
+        print_usage
+        exit 0
 fi
 
 if [ ! -f "$ifile" ]; then
@@ -205,35 +207,50 @@ if [ ! -f "$ifile" ]; then
   exit 1
 fi
 
+
+
+
+
+
 tmpdir=$(mktemp -d)
-[[ -z $ext ]] &&  ext=${ifile##*.}     # extension of the source file
+ifile=$(readlink -f "$ifile")
+idir=$(dirname "$ifile")
+ifile_name=$(basename $ifile)
+ifile_ext="${ifile_name##*.}"
+ifile_stem="${ifile_name%.*}"
+pidfile="${tmpdir}/pids"
+
 
 # try to find a makefile
-wd=$(dirname $ifile) # directory that the source file is in
-
+[[ -z $handler ]] && handler=${ifile_ext}
+makefiles_checked=()
 if [ ! -e "$makefile" ]
 then
+  makefiles_checked+=($makefile)
   # look for a Makefile with the same extension as the input file
   # in the same directory as the input file
-  makefile="$wd/Makefile.$ext"
+  makefile="$idir/Makefile.$handler"
 fi
 
 if [ ! -e "$makefile" ]
 then
+  makefiles_checked+=($makefile)
   # look for a Makefile with the same extension as the input file
   # in the .preview directory
-  makefile="$HOME/.preview/Makefile.$ext"
+  makefile="$HOME/.preview/Makefile.$handler"
 fi
 
 if [ ! -e "$makefile" ]
 then
+  makefiles_checked+=($makefile)
   # look for a Makefile
   # in the same directory as the input file
-  makefile="$wd/Makefile"
+  makefile="$idir/Makefile"
 fi
 
 if [ ! -e "$makefile" ]
 then
+  makefiles_checked+=($makefile)
   # look for a Makefile in the directory we where called from
   makefile="$HOME/.preview/Makefile"
 fi
@@ -241,62 +258,29 @@ fi
 
 if [ ! -e "$makefile" ] 
 then
-# create a makefile
-makefile=${tmpdir}/Makefile
-cat >$makefile << 'EOF'
-.PHONY: logfile
-logfile:
-	@echo ./preview.log
-
-.PHONY: build
-build:
-	pandoc -f markdown -t latex -o $(TMPDIR)/$(INFILE_STEM).pdf $(INFILE) || zenity --error --no-markup --text="There was a problem building the preview.\nCommand output was saved to $(LOGFILE)."
-
-.PHONY: setup
-setup: build
-
-.PHONY: start
-start:
-	zathura $(TMPDIR)/$(INFILE_STEM).pdf 1>/dev/null 2>/dev/null
-
-.PHONY: refresh
-refresh: build
-
-.PHONY: stop
-stop:
-
-.PHONY: cleanup
-cleanup:
-
-EOF
+        .log 0 "Could not find a Makefile to use."
+        .log 0 "Looked for the following files:"
+        for file in "${makefiles_checked[@]}"
+        do
+                .log 0 "$file"
+        done
+        exit 1
 fi
 
 
 .log 2 "Using '$makefile' for makefile"
 
-if [ $print_makefile -eq 1 ]
-then
-  cat $makefile
-  exit
-fi
 
-# exit if no input file was found
-if [ ! -e "$ifile" ]; then
-  exit 1
-fi
-
-
-ifile=$(readlink -f "$ifile")
-idir=$(dirname "$ifile")
-ifile_name=$(basename $ifile)
-ifile_ext="${ifile_name##*.}"
-ifile_stem="${ifile_name%.*}"
-
-pidfile="${tmpdir}/pids"
-
-echo $ifile > ~/.preview/last_ifile
-make="$MAKE -f $makefile INFILE=${ifile} INFILE_ABS=${ifile} INFILE_NAME=${ifile_name} INFILE_EXT=${ifile_ext} INFILE_STEM=${ifile_stem} INDIR=${idir} TMPDIR=${tmpdir} PIDFILE=${pidfile}"
-.log 2 $make
+make="$make -f $makefile"
+make="$make INFILE=${ifile}"
+make="$make INFILE_ABS=${ifile}"
+make="$make INFILE_NAME=${ifile_name}"
+make="$make INFILE_EXT=${ifile_ext}"
+make="$make INFILE_STEM=${ifile_stem}"
+make="$make INDIR=${idir}"
+make="$make TMPDIR=${tmpdir}"
+make="$make PIDFILE=${pidfile}"
+.log 2 "make cmd: $make"
 
 # get log filename
 if $make logfile > /dev/null 2>&1
@@ -305,12 +289,12 @@ then
 else
   lfile="preview.log"
 fi
-if [ ${__VERBOSE} -ge 2 ]; then
+if [ ${verbose_level} -ge 1 ]; then
 STDOUT="/dev/stdout"
 else
 STDOUT="/dev/null"
 fi
-if [ ${__VERBOSE} -ge 1 ]; then
+if [ ${verbose_level} -ge 0 ]; then
 STDERR="/dev/stderr"
 else
 STDERR="/dev/null"
@@ -402,7 +386,7 @@ do
   readlink -f "${file}" >> "$tmpdir/files.txt"
 done
 
-cat $tmpdir/files.txt | $ENTR $make refresh > >( tee -a ${lfile} > $STDOUT) 2> >(tee -a ${lfile} > $STDERR) &
+cat $tmpdir/files.txt | $entr $make refresh > >( tee -a ${lfile} > $STDOUT) 2> >(tee -a ${lfile} > $STDERR) &
 entrPID=$!
 sleep 0.1
 offspringPIDS="$offspringPIDS $(family_tree $entrPID)"

@@ -1,0 +1,8 @@
+refresh:
+	mdSlides $(INFILE) || zenity --error --no-markup --text="There was a problem building the preview. Command output was saved to $(LOGFILE)"
+
+setup:
+	firefox 0.0.0.0:8888 &
+
+start:
+	python3 -m 'http.server' -d $(INFILE_STEM) 8888
