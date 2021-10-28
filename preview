@@ -275,13 +275,18 @@ make="$make TMPDIR=${tmpdir}"
 make="$make PIDFILE=${pidfile}"
 .log 2 "make cmd: $make"
 
-# get log filename
-if $make logfile > /dev/null 2>&1
-then
-  lfile=$($make logfile)
-else
-  lfile="preview.log"
-fi
+
+function make_target_exists()
+{
+        target=$1
+        shift
+        grep "^$target:" $makefile >/dev/null 2>/dev/null
+}
+
+lfile="preview.log"
+make_target_exists logfile && lfile=$($make logfile)
+make="$make LOGFILE=${lfile}"
+
 if [ ${verbose_level} -ge 1 ]; then
 STDOUT="/dev/stdout"
 else
@@ -293,7 +298,6 @@ else
 STDERR="/dev/null"
 fi
 
-make="$make LOGFILE=${lfile}"
 
 
 
@@ -345,11 +349,11 @@ function kill_saved_procs()
 
 _stop() {
         .log 2 "Running 'make stop'..."
-        $make stop > >( tee -a ${lfile} > $STDOUT) 2> >(tee -a ${lfile} > $STDERR)
+        make_target_exists stop && $make stop > >( tee -a ${lfile} > $STDOUT) 2> >(tee -a ${lfile} > $STDERR)
 }
 _cleanup() {
         .log 2 "Running 'make cleanup'..."
-        $make cleanup > >( tee -a ${lfile} > $STDOUT) 2> >(tee -a ${lfile} > $STDERR)
+        make_target_exists cleanup && $make cleanup > >( tee -a ${lfile} > $STDOUT) 2> >(tee -a ${lfile} > $STDERR)
         .log 2 "Making sure child procs that were created are cleaned up..."
         kill_if_running $offspringPIDS
         kill_saved_procs $pidfile
@@ -367,7 +371,7 @@ PGID=$(ps -o pgid= $$)
 
 
 
-$make setup > >( tee -a ${lfile} > $STDOUT) 2> >(tee -a ${lfile} > $STDERR)
+make_target_exists setup && $make setup > >( tee -a ${lfile} > $STDOUT) 2> >(tee -a ${lfile} > $STDERR)
 $make start > >( tee -a ${lfile} > $STDOUT) 2> >(tee -a ${lfile} > $STDERR) &
 startPID=$!
 sleep 0.1

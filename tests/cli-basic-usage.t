@@ -29,10 +29,8 @@
 
   $ touch source.md
   $ $TESTDIR/../preview source.md
-  make: *** No rule to make target 'setup'.  Stop.
   make: *** No rule to make target 'start'.  Stop.
   make: *** No rule to make target 'refresh'.  Stop.
-  make: *** No rule to make target 'cleanup'.  Stop.
   [2]
 
   $ touch source.md
