@@ -43,7 +43,57 @@
   'cat' is required to run 'preview' but was not found. Please install it and run again.
   [1]
 
-  $ ln -s $(which cat) bin/cat
-  $ PATH="$PWD/bin" $TESTDIR/../preview | head -n 1
-  Usage: .* (re)
+  $ cat > Makefile.md << EOF
+  > setup:
+  > 	@:
+  > start:
+  > 	@:
+  > refresh:
+  > 	@:
+  > cleanup:
+  > 	@:
+  > EOF
+  $ touch test.md
 
+  $ ln -s $(which cat) bin/cat
+  $ PATH="$PWD/bin" $TESTDIR/../preview
+  'ps' is required to run 'preview' but was not found. Please install it and run again.
+  [1]
+
+  $ ln -s $(which ps) bin/ps
+  $ PATH="$PWD/bin" $TESTDIR/../preview test.md
+  'tee' is required to run 'preview' but was not found. Please install it and run again.
+  [1]
+
+  $ ln -s $(which tee) bin/tee
+  $ PATH="$PWD/bin" $TESTDIR/../preview test.md
+  'sleep' is required to run 'preview' but was not found. Please install it and run again.
+  [1]
+
+  $ ln -s $(which sleep) bin/sleep
+  $ PATH="$PWD/bin" $TESTDIR/../preview test.md
+  'grep' is required to run 'preview' but was not found. Please install it and run again.
+  [1]
+
+  $ ln -s $(which grep) bin/grep
+  $ PATH="$PWD/bin" $TESTDIR/../preview test.md
+  'sed' is required to run 'preview' but was not found. Please install it and run again.
+  [1]
+
+  $ ln -s $(which sed) bin/sed
+  $ PATH="$PWD/bin" $TESTDIR/../preview test.md
+  'awk' is required to run 'preview' but was not found. Please install it and run again.
+  [1]
+
+  $ ln -s $(which awk) bin/awk
+  $ PATH="$PWD/bin" $TESTDIR/../preview test.md
+  'ln' is required to run 'preview' but was not found. Please install it and run again.
+  [1]
+
+  $ ln -s $(which ln) bin/ln
+
+  $ PATH="$PWD/bin" $TESTDIR/../preview test.md
+
+  $ mkdir preview
+  $ mv Makefile.md preview
+  $ PATH="$PWD/bin" $TESTDIR/../preview --config-dir preview --local-link md:md

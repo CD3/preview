@@ -35,6 +35,10 @@
   make: *** No rule to make target 'cleanup'.  Stop.
   [2]
 
+  $ touch source.md
+  $ $TESTDIR/../preview -s source.md
+  [2]
+
 
   $ cat > Makefile.md << EOF
   > setup:

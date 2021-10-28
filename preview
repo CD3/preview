@@ -1,11 +1,12 @@
 #! /bin/bash
 
-for cmd in entr make getopt mktemp readlink dirname basename cat
+# check for dependencies and print an error out if any are missing.
+for cmd in entr make getopt mktemp readlink dirname basename cat ps tee sleep grep sed awk ln
 do
   eval "$cmd=$(which $cmd)"
   if eval "test -z \$$cmd"
   then
-        echo "'$cmd' is required to run 'preview' but was not found. Please install it and run again."
+        echo "'$cmd' is required to run 'preview' but was not found. Please install it and run again." >&2
         exit 1
   fi
 done
@@ -21,6 +22,7 @@ Usage: preview [options] [SOURCE FILE] [ADDITIONAL FILES TO WATCH...]
 Options:
       -v --verbose              | Increase verbose level.
       -d --debug                | Set verbose level to maximum.
+      -s --silent               | Disable all output
       -f --makefile             | FILE Use FILE instead of default makefile.
       -h --handler HANDLER      | Use HANDLER for preview handler rather than detecting.
       -l --local_link LEXT:GEXT | Create a Makefile symlink in current directory with extension LEXT to a global Makefile in ~/.preview with extension GEXT
@@ -78,7 +80,6 @@ Useful Tools for the Makefiles:
     - pandoc : a document converter that can generate PDFs from Markdown.
     - sexpect: a tool for starting and controlling interactive processes (like gnuplot).
     - grip: a python module and command line tool for previewing markdown in a browser.
-
 EOF
 }
 
@@ -101,7 +102,7 @@ function .log () {
 # adds a '--' between the options and arguments. 
 # then you can setup a while loop to process options easily and terminate
 # it when you run into the '--'
-NEW_COMMAND_LINE=$(getopt -o hfc::vdl: -l help,makefile:,config-dir:,verbose,debug,handler:,local-link: -n preview -- "$@")   # this creates a rearranged version of the command line
+NEW_COMMAND_LINE=$(getopt -o hfc::vdsl: -l help,makefile:,config-dir:,verbose,debug,silent,handler:,local-link: -n preview -- "$@")   # this creates a rearranged version of the command line
 if [ "$?" != "0" ] ; then echo "There was an error parsing the command line." >&2; exit 1 ; fi
 eval set -- "$NEW_COMMAND_LINE"
 
@@ -124,6 +125,10 @@ while true ; do
         ;;
     -d|--debug)
         verbose_level=2
+        shift 1
+        ;;
+    -s|--silent)
+        verbose_level=-1
         shift 1
         ;;
     -f|--makefile)
