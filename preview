@@ -1,27 +1,15 @@
 #! /bin/bash
 
-entr=$(which entr)
-make=$(which make)
-getopt=$(which getopt)
-
-
-if [[ -z $entr ]]
-then
-        echo ''entr' is required to run 'preview' but was not found. Please install it and run again.'
+for cmd in entr make getopt mktemp readlink dirname basename cat
+do
+  eval "$cmd=$(which $cmd)"
+  if eval "test -z \$$cmd"
+  then
+        echo "'$cmd' is required to run 'preview' but was not found. Please install it and run again."
         exit 1
-fi
+  fi
+done
 
-if [[ -z $make ]]
-then
-        echo ''make' is required to run 'preview' but was not found. Please install it and run again.'
-        exit 1
-fi
-
-if [[ -z $getopt ]]
-then
-        echo ''getopt' is required to run 'preview' but was not found. Please install it and run again.'
-        exit 1
-fi
 
 
 function print_usage()
@@ -184,7 +172,7 @@ then
             exit 1
     fi
     eval $link_cmd
-exit 0
+    exit 0
 fi
 
 # arguments start at $1...
