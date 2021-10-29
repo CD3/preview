@@ -188,10 +188,38 @@ cleanup:
 
 ![](./demos/GnuplotDemo.gif)
 
-## Using in an editor
+
+
+
+### Using in an editor
 
 `preview` can be called directly from your favorite text editor using your preferred method for asynchronous job control. For example, the [asyncrun.vim](https://github.com/skywind3000/asyncrun.vim) plugin:
 ![](./demos/VimDemo.gif)
+
+
+### Advanced Gnuplot
+
+Have you ever been working on a script that generates some data that you are then going to plot with gnuplot? Wouldn't it be nice if you could automatically run the script
+update the gnuplot window when you saved the script? Well, with `preview`, you can. With the `Makefile.gnuplot` file above, we can preview a gnuplot script. Then, write another
+Makefile that uses `preview` as its viewer. For example, lets say you want to use a gnuplot script named `plot-data.gnuplot` to plot data in a file named `data.txt`. This file could be used for a python script that generates the
+data in `data.txt`.
+```
+start:
+	preview plot-data.gnuplot data.txt
+
+refresh:
+	python $(INFILE)
+```
+The `start` target simply previews the gnuplot script, which will open a gnuplot window an automatically update any time `plot-data.gnuplot` or `data.txt` changes.
+Then, running `preview` with a python script that writes to a file named `data.txt` will automatically run the script when it changes, which will update `data.txt` and cause
+the gnuplot window to be updated.
+
+Here's what it looks like:
+
+![](./demos/AdvancedGnuplot.gif)
+
+Pretty nice, huh? Note that using `preview` to run the script is better than just adding a vim autocommand to run the script on write because 1) we can automatically open the gnuplot preview, and 2) `preview` uses
+`entr`, which will not relaunch a command when a file changes if the current command has not finished.
 
 ## Writing Makefiles
 
