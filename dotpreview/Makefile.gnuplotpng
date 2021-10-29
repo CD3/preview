@@ -1,6 +1,6 @@
 check-dependencies:
-	which gnuplot &> /dev/null || echo "Could not find 'gnuplot'. Try 'apt install gnuplot'."
-	which feh &> /dev/null || echo "Could not find 'feh', which is required to view the image produced by gnuplot.  Try 'apt install feh'."
+	which gnuplot >/dev/null 2>/dev/null || echo "Could not find 'gnuplot'. Try 'apt install gnuplot'."
+	which feh >/dev/null 2>/dev/null || echo "Could not find 'feh', which is required to view the image produced by gnuplot.  Try 'apt install feh'."
 
 setup: refresh
 

@@ -20,12 +20,14 @@ cat <<EOF
 Usage: preview [options] [SOURCE FILE] [ADDITIONAL FILES TO WATCH...]
 
 Options:
+      -c --config-dir DIR       | Use DIR instead of ~/.preview for config directory (this is were handler Makefiles are stored).
       -v --verbose              | Increase verbose level.
       -d --debug                | Set verbose level to maximum.
       -s --silent               | Disable all output
       -f --makefile             | FILE Use FILE instead of default makefile.
       -h --handler HANDLER      | Use HANDLER for preview handler rather than detecting.
       -l --local_link LEXT:GEXT | Create a Makefile symlink in current directory with extension LEXT to a global Makefile in ~/.preview with extension GEXT
+      -n --check-dependencies      | Check dependencies and exit.
 EOF
 
 }
@@ -102,7 +104,7 @@ function .log () {
 # adds a '--' between the options and arguments. 
 # then you can setup a while loop to process options easily and terminate
 # it when you run into the '--'
-NEW_COMMAND_LINE=$(getopt -o hfc::vdsl: -l help,makefile:,config-dir:,verbose,debug,silent,handler:,local-link: -n preview -- "$@")   # this creates a rearranged version of the command line
+NEW_COMMAND_LINE=$(getopt -o hfc::vdse:l:n -l help,makefile:,config-dir:,verbose,debug,silent,handler:,local-link:,check-dependencies -n preview -- "$@")   # this creates a rearranged version of the command line
 if [ "$?" != "0" ] ; then echo "There was an error parsing the command line." >&2; exit 1 ; fi
 eval set -- "$NEW_COMMAND_LINE"
 
@@ -112,6 +114,7 @@ makefile=""
 configdir="${HOME}/.preview"
 handler=""
 local_link=""
+check_deps_and_exit=0
 while true ; do
   case "$1" in
     -h|--help)
@@ -139,13 +142,17 @@ while true ; do
         configdir=$2
         shift 2
         ;;
-    --handler)
+    -e|--handler)
         handler=$2
         shift 2
         ;;
     -l|--local-link)
         local_link="$2"
         shift 2
+        ;;
+    -n|--check-dependencies)
+        check_deps_and_exit=1
+        shift 1
         ;;
     --) shift ; break ;;
      *) .log 0 "Unreconized option got through: '$1'" ; exit 1 ;;
@@ -294,6 +301,7 @@ then
   .log 0 $make_deps
   exit 1
 fi
+[[ $check_deps_and_exit == 1 ]] && exit 0
 
 
 

@@ -1,3 +1,6 @@
+check-dependencies:
+	which mdSlides >/dev/null 2>/dev/null || echo "`mdSlides` is required to build slidesho. Try 'pip3 install mdSlides'."
+	which firefox >/dev/null 2>/dev/null || echo "The mdSlides handler uses firefox to view the slide show, but it was not found. Try 'apt install firefox'."
 refresh:
 	mdSlides $(INFILE) || zenity --error --no-markup --text="There was a problem building the preview. Command output was saved to $(LOGFILE)"
 

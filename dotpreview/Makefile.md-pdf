@@ -1,0 +1,16 @@
+check-dependencies:
+	which pandoc >/dev/null 2>/dev/null || echo "'pandoc' is required by md-pdf handler. Try 'apt install pandoc'"
+	which zathura >/dev/null 2>/dev/null || echo "md-pdf handler could not find 'zathura' to view the PDF. Try 'apt install zathura'"
+
+setup: refresh
+
+start:
+	zathura $(TMPDIR)/$(INFILE_STEM).pdf 1>/dev/null 2>/dev/null
+
+refresh:
+	pandoc -f markdown -t latex -o $(TMPDIR)/$(INFILE_STEM).pdf $(INFILE)
+
+stop:
+
+cleanup:
+

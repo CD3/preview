@@ -1,7 +1,10 @@
+.PHONY: check-dependencies
+check-dependencies:
+	which grip >/dev/null 2>/dev/null || echo "'grip' is required by the grip handler. Try 'pip3 install grip'."
+
 .PHONY: start
 start:
 	grip -b $(INFILE_ABS)
-
 
 .PHONY: refresh
 refresh:

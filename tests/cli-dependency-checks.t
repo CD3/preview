@@ -134,9 +134,23 @@ Check that early failure does not call make cleanup
   $ PATH="$PWD/bin" $TESTDIR/../preview test.fancy
 
 
+The sexpect-based gnuplot handler
   $ cp $TESTDIR/../dotpreview/* preview
   $ touch test.gnuplot
-  $ PATH="$PWD/bin" $TESTDIR/../preview --config-dir ./preview test.gnuplot
-  [error] Some * (glob)
+  $ PATH="$PWD/bin" $TESTDIR/../preview --config-dir ./preview test.gnuplot | grep "'gnuplot'"
   [error] *'gnuplot'*'sexpect'*'zenity'* (glob)
+  $ ln -s $(which cat ) bin/gnuplot
+  $ PATH="$PWD/bin" $TESTDIR/../preview --config-dir ./preview test.gnuplot | grep "'gnuplot'"
+  [1]
+  $ ln -s $(which cat ) bin/sexpect
+  $ PATH="$PWD/bin" $TESTDIR/../preview --config-dir ./preview test.gnuplot | grep "'sexpect'"
+  [1]
+  $ ln -s $(which cat ) bin/zenity
+  $ PATH="$PWD/bin" $TESTDIR/../preview -n --config-dir ./preview test.gnuplot
+
+
+The sexpect-based gnuplot PNG handler
+  $ PATH="$PWD/bin" $TESTDIR/../preview --config-dir ./preview -e gnuplotpng test.gnuplot
+  [error] Some * (glob)
+  [error] *'feh'* (glob)
   [1]

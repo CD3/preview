@@ -1,3 +1,6 @@
+check-dependencies:
+	which tex2im >/dev/null 2>/dev/null || echo "'tex2im' is required by the tex2im handler. See 'https://github.com/CD3/tex2im' for information on installing it."
+	which feh >/dev/null 2>/dev/null || echo "'feh' is required by the tex2im handler. Try 'apt install feh'."
 build:
 	tex2im -n -o $(TMPDIR)/$(INFILE_STEM).png $(INFILE_ABS)
 
