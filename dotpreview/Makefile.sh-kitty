@@ -1,0 +1,11 @@
+check-dependencies:
+	which kitty 2> /dev/null >/dev/null || echo "The shell script handler requires 'kitty' with remote control enabled (see https://sw.kovidgoyal.net/kitty/remote-control/ for more information)."
+	which zenity 2> /dev/null >/dev/null || echo "Could not find 'zenity', which is used for creating the pop up window that keeps 'preview' alive.  Try 'apt install zenity'."
+start:
+	kitty @ launch --title ScriptPreview --keep-focus --type os-window
+	zenity --info --text "Press OK to exit."
+refresh:
+	kitty @ send-text --match title:ScriptPreview '${INFILE_ABS}\r'
+
+cleanup:
+	kitty @ send-text --match title:ScriptPreview 'exit\r'
