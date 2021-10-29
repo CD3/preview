@@ -230,7 +230,7 @@ then
   makefiles_checked+=($makefile)
   # look for a Makefile with the same extension as the input file
   # in the .preview directory
-  makefile="$HOME/.preview/Makefile.$handler"
+  makefile="$configdir/Makefile.$handler"
 fi
 
 if [ ! -e "$makefile" ]
@@ -245,7 +245,7 @@ if [ ! -e "$makefile" ]
 then
   makefiles_checked+=($makefile)
   # look for a Makefile in the directory we where called from
-  makefile="$HOME/.preview/Makefile"
+  makefile="$configdir/Makefile"
 fi
 
 
@@ -286,6 +286,19 @@ function make_target_exists()
 lfile="preview.log"
 make_target_exists logfile && lfile=$($make logfile)
 make="$make LOGFILE=${lfile}"
+
+make_deps=$(make_target_exists check-dependencies && $make -i -s check-dependencies)
+if [[ -n "$make_deps" ]]
+then
+  .log 0 "Some dependencies required by '$makefile' were not met:"
+  .log 0 $make_deps
+  exit 1
+fi
+
+
+
+
+
 
 if [ ${verbose_level} -ge 1 ]; then
 STDOUT="/dev/stdout"
@@ -365,12 +378,7 @@ trap _stop SIGINT
 trap _cleanup EXIT
 
 
-
-
 PGID=$(ps -o pgid= $$)
-
-
-
 make_target_exists setup && $make setup > >( tee -a ${lfile} > $STDOUT) 2> >(tee -a ${lfile} > $STDERR)
 $make start > >( tee -a ${lfile} > $STDOUT) 2> >(tee -a ${lfile} > $STDERR) &
 startPID=$!

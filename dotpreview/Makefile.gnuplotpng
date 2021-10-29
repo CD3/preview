@@ -1,0 +1,12 @@
+check-dependencies:
+	which gnuplot &> /dev/null || echo "Could not find 'gnuplot'. Try 'apt install gnuplot'."
+	which feh &> /dev/null || echo "Could not find 'feh', which is required to view the image produced by gnuplot.  Try 'apt install feh'."
+
+setup: refresh
+
+start:
+	feh -R 2 $(TMPDIR)/$(INFILE_STEM).png
+
+refresh:
+	gnuplot -e 'set term png; set output "$(TMPDIR)/$(INFILE_STEM).png"' $(INFILE_ABS)
+

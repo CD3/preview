@@ -90,6 +90,16 @@
   'ln' is required to run 'preview' but was not found. Please install it and run again.
   [1]
 
+Check that early failure does not call make cleanup
+  $ cat > Makefile.early_error << EOF
+  > cleanup:
+  > 	missing
+  > EOF
+  $ touch test.early_error
+  $ PATH="$PWD/bin" $TESTDIR/../preview test.early_error
+  'ln' is required to run 'preview' but was not found. Please install it and run again.
+  [1]
+
   $ ln -s $(which ln) bin/ln
 
   $ PATH="$PWD/bin" $TESTDIR/../preview test.md
@@ -97,3 +107,36 @@
   $ mkdir preview
   $ mv Makefile.md preview
   $ PATH="$PWD/bin" $TESTDIR/../preview --config-dir preview --local-link md:md
+
+
+
+  $ cat > Makefile.fancy << EOF
+  > check-dependencies:
+  > 	which awk > /dev/null 2>/dev/null || echo "fancy handler requires the 'awk' command"
+  > 	which ls > /dev/null 2>/dev/null || echo "fancy handler requires the 'ls' command"
+  > setup:
+  > 	@:
+  > start:
+  > 	@:
+  > refresh:
+  > 	@:
+  > cleanup:
+  > 	@:
+  > EOF
+  $ touch test.fancy
+  $ PATH="$PWD/bin" $TESTDIR/../preview test.fancy
+  [error] Some * met: (glob)
+  [error] fancy handler requires the 'ls' command
+  [1]
+
+
+  $ ln -s $(which ls) bin/ls
+  $ PATH="$PWD/bin" $TESTDIR/../preview test.fancy
+
+
+  $ cp $TESTDIR/../dotpreview/* preview
+  $ touch test.gnuplot
+  $ PATH="$PWD/bin" $TESTDIR/../preview --config-dir ./preview test.gnuplot
+  [error] Some * (glob)
+  [error] *'gnuplot'*'sexpect'*'zenity'* (glob)
+  [1]
